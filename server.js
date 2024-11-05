@@ -4,9 +4,17 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const pool = require("./db");
 const dotenv = require("dotenv");
+const cors = require("cors");
 
 dotenv.config();
 const app = express();
+app.use(
+  cors({
+    origin: "http://localhost:3000", // Allow only the frontend origin
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Explicitly allow needed methods
+    allowedHeaders: ["Content-Type", "Authorization"], // Allow these headers
+  })
+);
 app.use(express.json());
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
@@ -26,12 +34,10 @@ app.post("/register", async (req, res) => {
       [fullName, email, hashedPassword, idNumber]
     );
 
-    res
-      .status(201)
-      .json({
-        message: "User registered successfully",
-        userId: result.rows[0].id,
-      });
+    res.status(201).json({
+      message: "User registered successfully",
+      userId: result.rows[0].id,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Database error" });
