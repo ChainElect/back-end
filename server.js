@@ -54,6 +54,7 @@ app.post("/login", async (req, res) => {
       "SELECT * FROM users WHERE id_number = $1",
       [idNumber]
     );
+
     if (userResult.rows.length === 0) {
       return res.status(400).json({ error: "User not found" });
     }
@@ -66,16 +67,20 @@ app.post("/login", async (req, res) => {
       return res.status(400).json({ error: "Invalid credentials" });
     }
 
-    // Generate a JWT token
-    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
-      expiresIn: "1h",
-    });
+    // Generate a JWT token with isAdmin information
+    const token = jwt.sign(
+      { userId: user.id, isAdmin: user.is_admin },
+      process.env.JWT_SECRET,
+      { algorithm: "HS256", expiresIn: "1h" }
+    );
+
     res.json({ token });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Server error" });
   }
 });
+
 const authMiddleware = require("./authMiddleware");
 
 app.get("/protected", authMiddleware, (req, res) => {
