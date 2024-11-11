@@ -4,7 +4,7 @@ const { ethers } = require('ethers');
 // Ensure that the environment variables are being read correctly
 console.log('Private Key:', process.env.WALLET_PRIVATE_KEY); // Debug log to check if the private key is loaded correctly
 
-const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_URL);
+const provider = new ethers.JsonRpcProvider(process.env.API_URL);
 
 // Make sure that process.env.WALLET_PRIVATE_KEY is not undefined or empty
 if (!process.env.WALLET_PRIVATE_KEY) {

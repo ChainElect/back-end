@@ -26,7 +26,7 @@ app.use(express.json());
 app.use(authRoutes);
 
 // Use the smart contract related routes
-app.use('/onChain', onChainRoutes); // Prefix the smart contract routes with `/on-chain`
+app.use(onChainRoutes); // Prefix the smart contract routes with `/on-chain`
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
