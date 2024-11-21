@@ -39,6 +39,7 @@ router.post("/add-party", authMiddleware, async (req, res) => {
 
 // Get all parties
 router.get("/parties", async (req, res) => {
+  console.log("parties");
   try {
     const result = await pool.query("SELECT * FROM parties");
     res.status(200).json(result.rows);
