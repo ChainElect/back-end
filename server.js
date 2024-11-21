@@ -3,7 +3,7 @@ const dotenv = require("dotenv");
 const cors = require("cors");
 const { SUCCESS_MESSAGES } = require("./utilities/successMessages");
 const authRoutes = require("./routes/authRoutes"); // Import authRoutes
-
+const partyRoutes = require("./routes/partyRoutes"); // Import party routes
 dotenv.config();
 const app = express();
 
@@ -27,3 +27,4 @@ app.listen(PORT, () => {
 });
 
 app.use(authRoutes);
+app.use(partyRoutes);
