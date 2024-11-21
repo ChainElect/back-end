@@ -1,7 +1,9 @@
-const express = require('express');
-const dotenv = require('dotenv');
-const cors = require('cors');
-const authRoutes = require('./routes/authRoutes'); // Import the authentication routes
+const express = require("express");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const { SUCCESS_MESSAGES } = require("./utilities/successMessages");
+const authRoutes = require("./routes/authRoutes"); // Import authRoutes
+const partyRoutes = require("./routes/partyRoutes"); // Import party routes
 const onChainRoutes = require('./routes/onChainRoutes'); // Import the smart contract related routes
 
 dotenv.config();
@@ -30,5 +32,8 @@ app.use('/onChain', onChainRoutes); // Prefix the smart contract routes with `/o
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(SUCCESS_MESSAGES.SERVER_RUNNING_SUCCESSFULLY(PORT));
 });
+
+app.use(authRoutes);
+app.use(partyRoutes);
