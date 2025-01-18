@@ -1,0 +1,2 @@
+"use strict";(self.webpackChunkfront_end=self.webpackChunkfront_end||[]).push([[2853],{2853:(e,n,i)=>{i.d(n,{defineChain:()=>r.x,extractChain:()=>t});var r=i(9954);function t(e){let{chains:n,id:i}=e;return n.find((e=>e.id===i))}},9954:(e,n,i)=>{function r(e){return{formatters:void 0,fees:void 0,serializers:void 0,...e}}i.d(n,{x:()=>r})}}]);
+//# sourceMappingURL=2853.136108c2.chunk.js.map
