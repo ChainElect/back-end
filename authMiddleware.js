@@ -1,7 +1,7 @@
 // authMiddleware.js
 const jwt = require("jsonwebtoken");
 const dotenv = require("dotenv");
-const { ERROR_MESSAGES } = require("./utilities/errorMessages");
+const { ERROR_MESSAGES } = require("./utilities/messages/errorMessages");
 
 dotenv.config();
 

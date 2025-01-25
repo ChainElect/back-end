@@ -1,8 +1,8 @@
 const express = require("express");
-const pool = require("../db"); // Database connection
+const pool = require("../config/db"); // Database connection
 const authMiddleware = require("../authMiddleware"); // Middleware for authentication
-const { ERROR_MESSAGES } = require("../utilities/errorMessages");
-const { SUCCESS_MESSAGES } = require("../utilities/successMessages");
+const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
+const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
 
 const router = express.Router();
 

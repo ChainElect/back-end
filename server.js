@@ -2,9 +2,10 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
-const { SUCCESS_MESSAGES } = require("./utilities/successMessages");
-const authRoutes = require("./routes/authRoutes"); // Import authRoutes
-const partyRoutes = require("./routes/partyRoutes"); // Import party routes
+const { SUCCESS_MESSAGES } = require("./utilities/messages/successMessages");
+const authRoutes = require("./routes/authRoutes");
+const partyRoutes = require("./routes/partyRoutes");
+const verificationRoutes = require("./routes/verificationRoutes");
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use(express.static(reactBuildPath));
 // Use the authentication routes
 app.use(authRoutes);
 app.use(partyRoutes);
+app.use(verificationRoutes);
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
