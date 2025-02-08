@@ -48,5 +48,5 @@ app.use(onChainRoutes); // Prefix the smart contract routes with `/on-chain`
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(SUCCESS_MESSAGES.SERVER_RUNNING_SUCCESSFULLY(PORT));
+  console.log(SUCCESS_MESSAGES.COMMON.SERVER_RUNNING(PORT));
 });

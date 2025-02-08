@@ -1,33 +1,29 @@
 const express = require("express");
 const multer = require("multer");
-const {
-  captureFaceFromSelfie,
-  captureFaceFromIDCard,
-  compareFaces,
-} = require("../controllers/irController");
+const { compareFaces } = require("../controllers/irController");
 
 const router = express.Router();
 const upload = multer({ dest: "uploads/" });
 
-// Route to capture face from selfie
+// Middleware to validate file uploads for `/compare-faces`
+const validateUploads = (req, res, next) => {
+  if (!req.files || !req.files.selfie || !req.files.idCard) {
+    return res.status(400).json({
+      message: "Both selfie and ID card images are required.",
+    });
+  }
+  next();
+};
+
+// Route to compare faces (single endpoint for selfie and ID card uploads)
 router.post(
-  "/capture-face/selfie",
-  upload.single("selfie"),
-  (req, res, next) => {
-    if (!req.file) {
-      return res
-        .status(400)
-        .json({ success: false, message: "No file uploaded" });
-    }
-    next();
-  },
-  captureFaceFromSelfie
+  "/compare-faces",
+  upload.fields([
+    { name: "selfie", maxCount: 1 },
+    { name: "idCard", maxCount: 1 },
+  ]),
+  validateUploads,
+  compareFaces
 );
-
-// Route to capture face from ID card
-router.post("/capture-face/id", upload.single("idCard"), captureFaceFromIDCard);
-
-// Route to compare faces
-router.post("/compare-faces", compareFaces);
 
 module.exports = router;

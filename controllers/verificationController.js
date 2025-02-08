@@ -8,11 +8,9 @@ const { validateIDData } = require("../utilities/ocr/fieldExtractor");
 exports.uploadIDDocument = (req, res) => {
   const frontPath = req.files?.front[0]?.path; // Front side path
   const backPath = req.files?.back[0]?.path; // Back side path
-  console.log("Front Path:", frontPath);
-  console.log("Back Path:", backPath);
+
   if (!frontPath || !backPath) {
     return res.status(400).json({
-      success: false,
       message: "Both front and back images are required.",
     });
   }
