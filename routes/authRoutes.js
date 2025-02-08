@@ -2,9 +2,9 @@
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const pool = require("../db");
-const { ERROR_MESSAGES } = require("../utilities/errorMessages");
-const { SUCCESS_MESSAGES } = require("../utilities/successMessages");
+const pool = require("../config/db");
+const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
+const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
 const authMiddleware = require("../authMiddleware"); // Import the authentication middleware
 const dotenv = require("dotenv");
 
