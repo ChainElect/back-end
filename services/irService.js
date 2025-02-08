@@ -1,40 +1,27 @@
-const faceapi = require("face-api.js");
-const path = require("path");
-const { Canvas, Image, ImageData } = require("canvas");
-const loadImage = require("../utilities/ir/loadImage");
-const cropFace = require("../utilities/ir/cropFace");
+const faceapi = require("../utilities/ir/faceApiSetup");
+const loadImage = require("../utilities/ir/processing/loadImage");
+const cropFace = require("../utilities/ir/processing/cropFace");
+const { initializeModels } = require("../utilities/ir/models/initializeModels");
+const { compareDescriptors } = require("../utilities/ir/compareDescriptors");
+const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 
-// Register the canvas implementation with face-api.js
-faceapi.env.monkeyPatch({ Canvas, Image, ImageData });
-
-const initializeModels = async () => {
-  const modelPath = path.join(__dirname, "../models/face-api");
-  const ssdMobilenetv1Path = path.join(modelPath, "ssd_mobilenetv1");
-  const faceLandmark68NetPath = path.join(modelPath, "face_landmark_68");
-  const faceRecognitionNetPath = path.join(modelPath, "face_recognition");
-  const tinyFaceDetectorPath = path.join(modelPath, "tiny_face_detector");
-
-  try {
-    await faceapi.nets.ssdMobilenetv1.loadFromDisk(ssdMobilenetv1Path); // For selfies
-    await faceapi.nets.tinyFaceDetector.loadFromDisk(tinyFaceDetectorPath); // For ID cards
-    await faceapi.nets.faceLandmark68Net.loadFromDisk(faceLandmark68NetPath);
-    await faceapi.nets.faceRecognitionNet.loadFromDisk(faceRecognitionNetPath);
-    console.log("All models loaded successfully.");
-  } catch (error) {
-    console.error("Error loading models:", error);
-    throw new Error("Failed to initialize face recognition models.");
-  }
-};
-
+/**
+ * Detects and extracts a face from an image file.
+ *
+ * @param {string} imagePath - Path to the image file.
+ * @returns {Promise<string>} - The path to the cropped face image.
+ */
 const detectAndExtractFace = async (imagePath) => {
   try {
+    console.log("[INFO]: imagepath islallala:", imagePath);
     const imgCanvas = await loadImage(imagePath);
+    console.log("[INFO]: canvas:", imgCanvas);
     const detection = await faceapi
       .detectSingleFace(imgCanvas)
       .withFaceLandmarks();
 
     if (!detection) {
-      throw new Error("No face detected in the image.");
+      throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
     }
 
     const faceRegion = detection.detection.box;
@@ -43,73 +30,84 @@ const detectAndExtractFace = async (imagePath) => {
     await cropFace(imgCanvas, faceRegion, croppedFacePath);
     return croppedFacePath;
   } catch (error) {
-    console.error("Face detection and extraction failed:", error);
-    throw error;
+    console.error("[DETECT_AND_EXTRACT_FACE_ERROR]:", error.message, {
+      imagePath,
+    });
+    throw new Error(ERROR_MESSAGES.IR.FACE_EXTRACTION_FAILED);
   }
 };
 
-const extractDescriptorFromSelfie = async (imagePath) => {
+/**
+ * Processes and compares two face images: selfie and ID card.
+ *
+ * @param {string} selfiePath - Path to the selfie image.
+ * @param {string} idCardPath - Path to the ID card image.
+ * @returns {Promise<boolean>} - True if faces match, otherwise false.
+ */
+const processAndCompareFaces = async (selfiePath, idCardPath) => {
+  try {
+    // Initialize the models
+    await initializeModels();
+
+    // Detect and crop the face from the selfie
+    const croppedSelfiePath = await detectAndExtractFace(selfiePath);
+
+    // Detect and crop the face from the ID card
+    const croppedIDCardPath = await detectAndExtractFace(idCardPath);
+
+    // Extract descriptors for the cropped images
+    const selfieDescriptor = await extractDescriptor(croppedSelfiePath, {
+      detector: new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }),
+    });
+    const idCardDescriptor = await extractDescriptor(croppedIDCardPath, {
+      detector: new faceapi.TinyFaceDetectorOptions({
+        inputSize: 320,
+        scoreThreshold: 0.2,
+      }),
+    });
+
+    // Compare descriptors
+    return compareDescriptors(selfieDescriptor, idCardDescriptor);
+  } catch (error) {
+    console.error("[PROCESS_COMPARE_FACES_ERROR]:", error.message, {
+      selfiePath,
+      idCardPath,
+    });
+    throw new Error(ERROR_MESSAGES.IR.FACE_COMPARISON_FAILED);
+  }
+};
+
+/**
+ * Extracts a face descriptor from an image.
+ *
+ * @param {string} imagePath - Path to the image.
+ * @param {object} options - Detection options for faceapi.
+ * @returns {Promise<Float32Array>} - The face descriptor.
+ */
+const extractDescriptor = async (imagePath, options) => {
   try {
     const imgCanvas = await loadImage(imagePath);
-    console.log(`Selfie loaded successfully: ${imagePath}`);
-
+    console.log(`[INFO]: Starting face detection for image: ${imagePath}`);
+    console.log(`[INFO]: Detection options:`, options);
     const detection = await faceapi
-      .detectSingleFace(
-        imgCanvas,
-        new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
-      )
+      .detectSingleFace(imgCanvas, options.detector)
       .withFaceLandmarks()
       .withFaceDescriptor();
 
     if (!detection) {
-      throw new Error("No face detected in the selfie.");
+      throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
     }
 
-    console.log("Selfie detection box:", detection.detection.box);
-    return detection.descriptor; // Return the face descriptor
+    return detection.descriptor;
   } catch (error) {
-    console.error("Selfie face descriptor extraction failed:", error);
+    console.error("[EXTRACT_DESCRIPTOR_ERROR]:", error.message, {
+      imagePath,
+    });
     throw error;
   }
-};
-
-const extractDescriptorFromIDCard = async (imagePath) => {
-  try {
-    const imgCanvas = await loadImage(imagePath);
-    console.log(`ID card loaded successfully: ${imagePath}`);
-
-    const detection = await faceapi
-      .detectSingleFace(
-        imgCanvas,
-        new faceapi.TinyFaceDetectorOptions({
-          inputSize: 320,
-          scoreThreshold: 0.2,
-        }) // Lower threshold for ID cards
-      )
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (!detection) {
-      throw new Error("No face detected in the ID card.");
-    }
-
-    console.log("ID card detection box:", detection.detection.box);
-    return detection.descriptor; // Return the face descriptor
-  } catch (error) {
-    console.error("ID card face descriptor extraction failed:", error);
-    throw error;
-  }
-};
-
-const compareDescriptors = (descriptor1, descriptor2, threshold = 0.6) => {
-  const distance = faceapi.euclideanDistance(descriptor1, descriptor2);
-  return distance < threshold; // True if match, false otherwise
 };
 
 module.exports = {
-  initializeModels,
   detectAndExtractFace,
-  extractDescriptorFromSelfie,
-  extractDescriptorFromIDCard,
-  compareDescriptors,
+  processAndCompareFaces,
 };
