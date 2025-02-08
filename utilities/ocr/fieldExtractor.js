@@ -13,13 +13,6 @@ const extractField = (text, fieldName, regex = null) => {
 };
 const extractIDFields = (text) => {
   return {
-    // Match "Surname" with strict context
-    surname: extractField(
-      text,
-      "Surname",
-      /\bSurname\s*[:\-]?\s*([A-Za-z]+)\b/i
-    ),
-
     // Match "Name" distinctly
     name: extractField(text, "Name", /\bName\s*[:\-]?\s*([A-Za-z]+)\b/i),
 
@@ -28,6 +21,13 @@ const extractIDFields = (text) => {
       text,
       "Father's name",
       /\bFather's name\s*[:\-]?\s*([A-Za-z]+)\b/i
+    ),
+
+    // Match "Surname" with strict context
+    surname: extractField(
+      text,
+      "Surname",
+      /\bSurname\s*[:\-]?\s*([A-Za-z]+)\b/i
     ),
 
     // Match "No" or "Personal No" for the 10-digit ID number

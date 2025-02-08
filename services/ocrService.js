@@ -44,4 +44,55 @@ const performOCR = async (filePath) => {
   }
 };
 
-module.exports = { performOCR };
+/**
+ * Extracts MRZ (Machine Readable Zone) text from an ID card.
+ * @param {string} filePath - Path to the back image of the ID.
+ * @returns {Promise<string>} - Extracted MRZ text.
+ */
+const extractMRZ = async (filePath) => {
+  try {
+    const processedPath = await preprocessImage(filePath);
+    const tessdataPath = "/app/tessdata";
+
+    const {
+      data: { text },
+    } = await Tesseract.recognize(processedPath, "ocrb", {
+      langPath: tessdataPath,
+    });
+
+    fs.unlinkSync(processedPath);
+
+    console.log("Extracted Raw MRZ Text:\n", text);
+
+    // Clean up the extracted text
+    const lines = text
+      .split("\n")
+      .map((line) => line.replace(/\s/g, "")) // Remove all spaces
+      .filter((line) => /^[A-Z0-9<]+$/.test(line) && line.length > 20); // Keep only valid MRZ-like lines
+
+    // Start keeping lines **only when we find an ID pattern**
+    const mrzStartIndex = lines.findIndex((line) =>
+      /^ID[A-Z]{3}[0-9<]+$/.test(line)
+    );
+    if (mrzStartIndex === -1 || lines.length - mrzStartIndex < 3) {
+      throw new Error(
+        "Invalid MRZ format: 'IDBGR' not found or incomplete MRZ."
+      );
+    }
+
+    // Extract the last 3 lines after finding IDBGR
+    const mrzLines = lines.slice(mrzStartIndex, mrzStartIndex + 3);
+
+    console.log("Filtered MRZ Lines:\n", mrzLines);
+
+    return mrzLines.join("\n"); // Return properly formatted MRZ
+  } catch (error) {
+    console.error(`[MRZ_ERROR]: ${error.message}`, {
+      filePath,
+      stack: error.stack,
+    });
+    throw new Error("MRZ extraction failed.");
+  }
+};
+
+module.exports = { performOCR, extractMRZ };

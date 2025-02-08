@@ -43,8 +43,8 @@ app.use(irRoutes);
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
 });
-// Use the smart contract related routes
-app.use(onChainRoutes); // Prefix the smart contract routes with `/on-chain`
+// // Use the smart contract related routes
+// app.use(onChainRoutes); // Prefix the smart contract routes with `/on-chain`
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
