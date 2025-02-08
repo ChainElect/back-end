@@ -1,8 +1,8 @@
 // routes/onChainRoutes.js
 const express = require('express');
-const { getAdmin, changeAdmin } = require('../../SmartContractEth/scripts/AdminFunc');
-const { createElection, addParty, getResults } = require('../../SmartContractEth/scripts/ElectionFunc');
-const { vote } = require('../../SmartContractEth/scripts/VoteFunc');
+const { getAdmin, changeAdmin } = require('../chainInteractions/AdminFunc');
+const { createElection, addParty, getResults } = require('../chainInteractions/ElectionFunc');
+const { vote } = require('../chainInteractions/VoteFunc');
 
 const router = express.Router();
 
