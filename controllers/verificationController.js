@@ -1,8 +1,9 @@
 const fs = require("fs");
-const { performOCR } = require("../services/ocrService");
+const { performOCR, extractMRZ } = require("../services/ocrService");
 const faceRecognitionService = require("../services/faceRecognitionService");
 const userModel = require("../models/userModel");
 const { validateIDData } = require("../utilities/ocr/fieldExtractor");
+const { parseMRZ } = require("../utilities/ocr/mrzExtractor");
 
 // Upload ID Document (both sides)
 exports.uploadIDDocument = (req, res) => {
@@ -21,40 +22,65 @@ exports.uploadIDDocument = (req, res) => {
   });
 };
 
-// Validate ID Document (both sides)
+// Validate ID Document using previously uploaded files
 exports.validateIDDocument = async (req, res) => {
-  const { frontPath } = req.body; // Only use the frontPath
+  const { frontPath, backPath } = req.body; // Paths stored from `/upload-id`
 
-  if (!frontPath) {
+  if (!frontPath || !backPath) {
     return res.status(400).json({
       success: false,
-      message: "Front file path is required.",
+      message: "Missing ID document file paths. Upload ID first.",
     });
   }
 
   try {
+    // Extract details from the front side
     const frontText = await performOCR(frontPath);
+    const frontData = validateIDData(frontText);
 
-    console.log("Extracted Front Text:", frontText);
+    if (!frontData.success) {
+      return res
+        .status(400)
+        .json({ success: false, message: frontData.message });
+    }
 
-    fs.unlinkSync(frontPath); // Clean up the file after processing
+    // Extract and parse MRZ from the back side
+    const mrzText = await extractMRZ(backPath);
+    const mrzData = parseMRZ(mrzText);
 
-    const validationResult = validateIDData(frontText);
+    console.log("Front Data:", frontData.data);
+    console.log("MRZ Data:", mrzData);
 
-    if (!validationResult.success) {
+    // Compare MRZ with Front OCR
+    const isMatch =
+      frontData.data.name.toUpperCase() === mrzData.name.toUpperCase() &&
+      frontData.data.surname.toUpperCase() === mrzData.surname.toUpperCase() &&
+      frontData.data.fathersName.toUpperCase() ===
+        mrzData.fathersName.toUpperCase();
+
+    if (!isMatch) {
       return res.status(400).json({
         success: false,
-        message: validationResult.message,
+        message:
+          "ID verification failed. Data mismatch between front OCR and MRZ.",
       });
     }
+
+    // Cleanup files
+    fs.unlinkSync(frontPath);
+    fs.unlinkSync(backPath);
 
     res.json({
       success: true,
       message: "ID validation successful",
-      extractedData: validationResult.data,
+      extractedData: {
+        ...frontData.data,
+        mrzData,
+      },
     });
   } catch (error) {
     if (fs.existsSync(frontPath)) fs.unlinkSync(frontPath);
+    if (fs.existsSync(backPath)) fs.unlinkSync(backPath);
 
     res.status(500).json({
       success: false,
@@ -63,6 +89,7 @@ exports.validateIDDocument = async (req, res) => {
     });
   }
 };
+
 // Upload Face Image
 exports.uploadFaceImage = (req, res) => {
   const filePath = req.file.path;
