@@ -1,7 +1,7 @@
 require("dotenv").config();
 const { ethers } = require("ethers");
 
-const provider = new ethers.JsonRpcProvider(process.env.ALCHEMY_URL);
+const provider = new ethers.JsonRpcProvider(process.env.API_URL);
 
 // Make sure that process.env.WALLET_PRIVATE_KEY is not undefined or empty
 if (!process.env.WALLET_PRIVATE_KEY) {
