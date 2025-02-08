@@ -6,7 +6,7 @@ const { SUCCESS_MESSAGES } = require("./utilities/messages/successMessages");
 const authRoutes = require("./routes/authRoutes");
 const partyRoutes = require("./routes/partyRoutes");
 const verificationRoutes = require("./routes/verificationRoutes");
-
+const irRoutes = require("./routes/irRoutes");
 dotenv.config();
 
 const app = express();
@@ -30,8 +30,15 @@ app.use(express.static(reactBuildPath));
 
 // Use the authentication routes
 app.use(authRoutes);
+
+// Use the party routes
 app.use(partyRoutes);
+
+// Use the verification routes
 app.use(verificationRoutes);
+
+// Use the IR routes
+app.use(irRoutes);
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
