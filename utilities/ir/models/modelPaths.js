@@ -1,10 +1,15 @@
+/**
+ * @module ModelPaths
+ * @description Provides paths to all required face recognition models.
+ */
+
 const path = require("path");
 
-/**
- * Base directory for face recognition models.
- * This is the root folder where all the models are stored.
- */
-const MODEL_BASE_PATH = path.join(__dirname, "../../../models/face-api");
+// Base directory for face recognition models.
+// This is the root folder where all the models are stored.
+const MODEL_BASE_PATH =
+  process.env.MODEL_BASE_PATH ||
+  path.join(__dirname, "../../../models/face-api");
 
 /**
  * Object containing paths to all required models for face recognition.
