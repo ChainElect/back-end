@@ -12,6 +12,7 @@ const extractField = (text, fieldName, regex = null) => {
   return match ? match[1].trim() : null;
 };
 const extractIDFields = (text) => {
+  console.log("Extracting ID fields from text:", text);
   return {
     // Match "Name" distinctly
     name: extractField(text, "Name", /\bName\s*[:\-]?\s*([A-Za-z]+)\b/i),
@@ -39,7 +40,7 @@ const extractIDFields = (text) => {
 
 const validateIDData = (frontText) => {
   const fields = extractIDFields(frontText);
-
+  console.log("[INFO]: fields:", fields);
   // Check for missing required fields
   const missingFields = [];
   ["surname", "name", "fathersName", "idNumber"].forEach((field) => {

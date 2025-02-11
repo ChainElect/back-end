@@ -5,7 +5,7 @@ const path = require("path");
 const { SUCCESS_MESSAGES } = require("./utilities/messages/successMessages");
 const authRoutes = require("./routes/authRoutes");
 const partyRoutes = require("./routes/partyRoutes");
-const verificationRoutes = require("./routes/verificationRoutes");
+const ocrRoutes = require("./routes/ocrRoutes");
 const irRoutes = require("./routes/irRoutes");
 dotenv.config();
 
@@ -34,8 +34,8 @@ app.use(authRoutes);
 // Use the party routes
 app.use(partyRoutes);
 
-// Use the verification routes
-app.use(verificationRoutes);
+// Use the ocr routes
+app.use(ocrRoutes);
 
 // Use the IR routes
 app.use(irRoutes);

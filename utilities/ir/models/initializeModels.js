@@ -1,4 +1,4 @@
-const faceapi = require("face-api.js");
+const faceapi = require("../faceApiSetup");
 const { ERROR_MESSAGES } = require("../../messages/errorMessages");
 const MODEL_PATHS = require("../models/modelPaths");
 

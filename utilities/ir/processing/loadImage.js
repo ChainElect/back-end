@@ -1,7 +1,7 @@
 const fs = require("fs");
-const { loadImage } = require("canvas");
 const { ERROR_MESSAGES } = require("../../messages/errorMessages");
-
+const { loadImage } = require("canvas");
+const faceapi = require("../faceApiSetup");
 /**
  * Loads and preprocesses an image for further processing.
  *
@@ -19,7 +19,7 @@ const loadImageUtility = async (imagePath) => {
 
     // Attempt to load the image using the canvas package
     const image = await loadImage(imagePath);
-    return image;
+    return faceapi.createCanvasFromMedia(image);
   } catch (error) {
     // Log the specific error for debugging
     console.error("[IMAGE_LOAD_ERROR]:", error.message, { path: imagePath });
