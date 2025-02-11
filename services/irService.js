@@ -1,115 +1,89 @@
-// irService.js
-
+const path = require("path");
 const faceapi = require("../utilities/ir/faceApiSetup");
 const loadImage = require("../utilities/ir/processing/loadImage");
 const cropFace = require("../utilities/ir/processing/cropFace");
-const { initializeModels } = require("../utilities/ir/models/initializeModels");
+const extractDescriptor = require("../utilities/ir/extractDescriptor");
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 
 /**
- * Detects and extracts a face from an image file.
+ * @summary Detects and extracts a face from an image file.
+ * @description Loads an image, performs face detection with landmarks,
+ * and then crops the detected face using the bounding box provided by the detection.
  *
- * @param {string} imagePath - Path to the image file.
- * @returns {Promise<string>} - The path to the cropped face image.
+ * @param {string} imagePath - The file path of the image.
+ * @returns {Promise<string>} Resolves with the file path of the cropped face image.
+ * @throws {Error} Throws an error if no face is detected or cropping fails.
  */
 const detectAndExtractFace = async (imagePath) => {
   try {
-    // Load the image (this should return a canvas or compatible object)
+    // Load the image (should return a canvas or a compatible object)
     const imgCanvas = await loadImage(imagePath);
-    // Run face detection with landmarks (without the descriptor)
+
+    // Perform face detection with landmarks (without the descriptor)
     const detection = await faceapi
       .detectSingleFace(imgCanvas)
       .withFaceLandmarks();
 
+    // If no face is detected, throw an error with the standardized message
     if (!detection) {
       throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
     }
 
-    // Use the bounding box to crop the face
+    // Retrieve the bounding box for cropping the face
     const faceRegion = detection.detection.box;
-    const croppedFacePath = `${imagePath}-cropped.jpg`;
+    const { dir, name } = path.parse(imagePath);
+    const croppedFacePath = path.join(dir, `${name}-cropped.jpg`);
 
+    // Crop the image using the detected bounding box and save the result
     await cropFace(imgCanvas, faceRegion, croppedFacePath);
+
     return croppedFacePath;
   } catch (error) {
     console.error("[DETECT_AND_EXTRACT_FACE_ERROR]:", error.message, {
       imagePath,
     });
+    // Rethrow a generic error message for face extraction failures
     throw new Error(ERROR_MESSAGES.IR.FACE_EXTRACTION_FAILED);
   }
 };
 
 /**
- * Extracts a face descriptor from a selfie image.
+ * @summary Extracts a face descriptor from a selfie image.
+ * @description Uses a default confidence threshold appropriate for selfie images.
  *
- * @param {string} imagePath - Path to the selfie image.
- * @returns {Promise<Float32Array>} - The face descriptor.
+ * @param {string} imagePath - The file path of the selfie image.
+ * @returns {Promise<Float32Array>} Resolves with the face descriptor.
+ * @throws {Error} Throws an error if face detection or extraction fails.
  */
 const extractDescriptorFromSelfie = async (imagePath) => {
-  try {
-    const imgCanvas = await loadImage(imagePath);
-    console.log(`Selfie loaded successfully: ${imagePath}`);
-
-    const detection = await faceapi
-      .detectSingleFace(
-        imgCanvas,
-        new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 })
-      )
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (!detection) {
-      throw new Error("No face detected in the selfie.");
-    }
-
-    console.log("Selfie detection box:", detection.detection.box);
-    return detection.descriptor;
-  } catch (error) {
-    console.error("Selfie face descriptor extraction failed:", error);
-    throw error;
-  }
+  // Selfies typically use a higher confidence threshold (0.5)
+  return extractDescriptor(imagePath, 0.5);
 };
 
 /**
- * Extracts a face descriptor from an ID card image.
+ * @summary Extracts a face descriptor from an ID card image.
+ * @description Uses a slightly lower confidence threshold to accommodate different image qualities.
  *
- * @param {string} imagePath - Path to the ID card image.
- * @returns {Promise<Float32Array>} - The face descriptor.
+ * @param {string} imagePath - The file path of the ID card image.
+ * @returns {Promise<Float32Array>} Resolves with the face descriptor.
+ * @throws {Error} Throws an error if face detection or extraction fails.
  */
 const extractDescriptorFromIDCard = async (imagePath) => {
-  try {
-    const imgCanvas = await loadImage(imagePath);
-    console.log(`ID card loaded successfully: ${imagePath}`);
-
-    const detection = await faceapi
-      .detectSingleFace(
-        imgCanvas,
-        new faceapi.SsdMobilenetv1Options({ minConfidence: 0.4 })
-      )
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (!detection) {
-      throw new Error("No face detected in the ID card.");
-    }
-
-    console.log("ID card detection box:", detection.detection.box);
-    return detection.descriptor;
-  } catch (error) {
-    console.error("ID card face descriptor extraction failed:", error);
-    throw error;
-  }
+  // ID cards typically use a lower confidence threshold (0.4)
+  return extractDescriptor(imagePath, 0.4);
 };
 
 /**
- * Compares two face descriptors using Euclidean distance.
+ * @summary Compares two face descriptors using Euclidean distance.
+ * @description If the distance between the descriptors is below the specified threshold,
+ * the function returns true, indicating a match.
  *
- * @param {Float32Array} descriptor1 - First face descriptor.
- * @param {Float32Array} descriptor2 - Second face descriptor.
- * @param {number} [threshold=0.6] - Matching threshold.
- * @returns {boolean} - True if the descriptors match (distance below threshold), else false.
+ * @param {Float32Array} descriptor1 - The first face descriptor.
+ * @param {Float32Array} descriptor2 - The second face descriptor.
+ * @param {number} [threshold=0.6] - The matching threshold.
+ * @returns {boolean} True if the descriptors match (distance is below threshold), else false.
  */
-const compareDescriptorsFn = (descriptor1, descriptor2, threshold = 0.6) => {
+const compareDescriptors = (descriptor1, descriptor2, threshold = 0.6) => {
   const distance = faceapi.euclideanDistance(descriptor1, descriptor2);
   console.log(`Distance between descriptors: ${distance}`);
   return distance < threshold;
@@ -119,5 +93,5 @@ module.exports = {
   detectAndExtractFace,
   extractDescriptorFromSelfie,
   extractDescriptorFromIDCard,
-  compareDescriptors: compareDescriptorsFn,
+  compareDescriptors,
 };
