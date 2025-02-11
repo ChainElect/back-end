@@ -1,28 +1,27 @@
 const sharp = require("sharp");
+const path = require("path");
 const { ERROR_MESSAGES } = require("../messages/errorMessages");
 
 /**
- * Preprocesses an image to enhance its quality for better OCR accuracy.
+ * @summary Preprocesses an image to enhance its quality for better OCR accuracy.
+ * @description Converts the image to grayscale, normalizes its contrast, resizes it to 1000px width,
+ * and saves the processed image as a new file.
  *
- * This function performs the following steps:
- * - Converts the image to grayscale to reduce noise.
- * - Normalizes the image to improve contrast.
- * - Resizes the image to 1000px width for better clarity and consistency.
- * - Saves the processed image as a new file.
- *
- * @param {string} filePath - The path to the original image file to be processed.
- * @returns {Promise<string>} - The path to the processed image file.
- * @throws {Error} - Throws an error if the preprocessing fails.
+ * @param {string} filePath - The path to the original image file.
+ * @returns {Promise<string>} The path to the processed image file.
+ * @throws {Error} Throws an error if preprocessing fails.
  */
 const preprocessImage = async (filePath) => {
-  const processedPath = `${filePath}-processed.png`;
+  // Construct the processed file path using the same directory and file name with a new suffix
+  const { dir, name } = path.parse(filePath);
+  const processedPath = path.join(dir, `${name}-processed.png`);
 
   try {
     await sharp(filePath)
       .grayscale() // Convert to grayscale
       .normalise() // Enhance contrast
-      .resize(1000) // Resize to 1000px for clarity
-      .toFile(processedPath); // Save processed image
+      .resize(1000) // Resize to 1000px width for clarity
+      .toFile(processedPath);
     return processedPath;
   } catch (error) {
     console.error(`[PREPROCESS_IMAGE_ERROR]: ${error.message}`, {
