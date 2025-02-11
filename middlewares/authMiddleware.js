@@ -25,7 +25,7 @@ function authMiddleware(req, res, next) {
   const token = req.header("Authorization")?.replace("Bearer ", "");
 
   if (!token) {
-    return res.status(401).json({ error: ERROR_MESSAGES.ACCESS_DENIED });
+    return res.status(401).json({ error: ERROR_MESSAGES.AUTH.ACCESS_DENIED });
   }
 
   try {
@@ -33,7 +33,7 @@ function authMiddleware(req, res, next) {
     req.user = decoded; // Attach decoded token payload (e.g., user ID) to request
     next();
   } catch (error) {
-    res.status(401).json({ error: ERROR_MESSAGES.INVALID_TOKEN });
+    res.status(401).json({ error: ERROR_MESSAGES.AUTH.INVALID_TOKEN });
   }
 }
 
