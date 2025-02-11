@@ -4,7 +4,7 @@
  * the front and back images of an ID, extracting and parsing MRZ data, validating
  * the ID document, and storing validated data in the database.
  */
-
+const Sentry = require("@sentry/node");
 const fs = require("fs");
 const { extractMRZ } = require("../services/ocrService");
 const userModel = require("../models/userModel");
@@ -60,6 +60,7 @@ exports.uploadAndProcessIDBack = async (req, res) => {
     } catch (cleanupError) {
       console.error("Error during file cleanup:", cleanupError.message);
     }
+    Sentry.captureException(error);
     return res.status(500).json({
       success: false,
       message: "Failed to process the back image.",
@@ -109,6 +110,7 @@ exports.validateIDDocument = async (req, res) => {
     } catch (cleanupError) {
       console.error("Error during file cleanup:", cleanupError.message);
     }
+    Sentry.captureException(error);
     return res.status(500).json({
       success: false,
       message: "ID validation failed.",
@@ -134,6 +136,7 @@ exports.storeValidatedData = async (req, res) => {
     const user = await userModel.saveUser({ name, dob, idNumber });
     return res.json({ success: true, user });
   } catch (error) {
+    Sentry.captureException(error);
     return res.status(500).json({
       success: false,
       message: "Failed to save user data.",

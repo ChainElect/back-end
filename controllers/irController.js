@@ -4,11 +4,12 @@
  * including face image uploads and face matching.
  */
 
+const Sentry = require("@sentry/node");
 const {
   extractDescriptorFromSelfie,
   extractDescriptorFromIDCard,
-  compareDescriptors,
 } = require("../services/irService");
+const { compareDescriptors } = require("../utilities/ir/compareDescriptors");
 const { initializeModels } = require("../utilities/ir/models/initializeModels");
 
 exports.uploadFaceImage = (req, res) => {
@@ -45,6 +46,7 @@ exports.matchFace = async (req, res) => {
       });
     }
   } catch (error) {
+    Sentry.captureException(error);
     return res.status(500).json({
       success: false,
       message: "Face matching failed.",
