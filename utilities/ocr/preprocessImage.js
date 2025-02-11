@@ -12,6 +12,10 @@ const { ERROR_MESSAGES } = require("../messages/errorMessages");
  * @throws {Error} Throws an error if preprocessing fails.
  */
 const preprocessImage = async (filePath) => {
+  if (typeof filePath !== "string") {
+    throw new Error("Image processing failed: Invalid file path");
+  }
+
   // Construct the processed file path using the same directory and file name with a new suffix
   const { dir, name } = path.parse(filePath);
   const processedPath = path.join(dir, `${name}-processed.png`);
