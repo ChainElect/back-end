@@ -1,10 +1,9 @@
 /**
- * Centralized Error Messages
- *
- * This module provides a consistent way to define and manage error messages
- * across the application. Grouped by feature modules, it allows easier
- * localization, modification, and reuse.
+ * @module ErrorMessages
+ * @description Provides a centralized collection of error messages organized by domain.
+ * These messages are used throughout the application for consistent error handling.
  */
+
 module.exports = {
   ERROR_MESSAGES: {
     /**

@@ -1,10 +1,9 @@
 /**
- * Centralized Success Messages
- *
- * This module provides a consistent way to define and manage success messages
- * across the application. Grouped by feature modules, it allows easier
- * localization, modification, and reuse.
+ * @module SuccessMessages
+ * @description Provides a centralized collection of success messages organized by domain.
+ * These messages are used throughout the application for consistent success handling.
  */
+
 module.exports = {
   SUCCESS_MESSAGES: {
     /**
