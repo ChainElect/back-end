@@ -1,6 +1,6 @@
 const express = require("express");
 const pool = require("../config/db"); // Database connection
-const authMiddleware = require("../authMiddleware"); // Middleware for authentication
+const authMiddleware = require("../middlewares/authMiddleware"); // Middleware for authentication
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
 
@@ -39,7 +39,6 @@ router.post("/add-party", authMiddleware, async (req, res) => {
 
 // Get all parties
 router.get("/parties", async (req, res) => {
-  console.log("parties");
   try {
     const result = await pool.query("SELECT * FROM parties");
     res.status(200).json(result.rows);

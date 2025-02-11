@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const pool = require("../config/db");
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
-const authMiddleware = require("../authMiddleware"); // Import the authentication middleware
+const authMiddleware = require("../middlewares/authMiddleware"); // Import the authentication middleware
 const dotenv = require("dotenv");
 
 dotenv.config();

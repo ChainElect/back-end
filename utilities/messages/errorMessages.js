@@ -1,10 +1,9 @@
 /**
- * Centralized Error Messages
- *
- * This module provides a consistent way to define and manage error messages
- * across the application. Grouped by feature modules, it allows easier
- * localization, modification, and reuse.
+ * @module ErrorMessages
+ * @description Provides a centralized collection of error messages organized by domain.
+ * These messages are used throughout the application for consistent error handling.
  */
+
 module.exports = {
   ERROR_MESSAGES: {
     /**
@@ -25,6 +24,14 @@ module.exports = {
       TEXT_EXTRACTION_FAILED:
         "OCR failed. Ensure the ID image is clear and readable.", // Thrown when OCR processing fails
       IMAGE_PROCESSING_FAILED: "Image processing failed", // Thrown during preprocessing issues
+      FRONT_IMAGE_REQUIRED: "Front image is required.", // Thrown when front image is missing
+      BACK_IMAGE_REQUIRED: "Back image is required.", // Thrown when back image is missing
+      BACK_IMAGE_PROCESSING_FAILED: "Failed to process the back image.", // Thrown when back image processing fails
+      MISSING_ID_BACK_IMAGE:
+        "Missing ID document back image file path. Upload the back image first.", // Thrown when back image file path is missing
+      ID_VALIDATION_FAILED: "ID validation failed.", // Thrown when ID validation fails
+      VALIDATED_DATA_REQUIRED: "Name, DOB, and ID number are required.", // Thrown when validated data is missing
+      FAILED_TO_SAVE_USER_DATA: "Failed to save user data.", // Thrown when saving user data fails
     },
 
     /**
@@ -40,6 +47,11 @@ module.exports = {
       NO_FACE_DETECTED: "No face detected in the image", // Thrown when no face is detected in the image
       FACE_EXTRACTION_FAILED: "Face extraction failed", // Thrown when face extraction fails
       FACE_COMPARISON_FAILED: "Face comparison failed", // Thrown when face comparison fails
+      FACE_IMAGE_REQUIRED: "Face image is required.", // Thrown when a face image is required for a specific operation
+      IMAGE_PATHS_REQUIRED:
+        "Both selfie and ID card face image paths are required.", // Thrown when both selfie and ID card face image paths are required
+      FACE_NOT_MATCHED: "Face does not match the ID photo.", // Thrown when the face does not match the ID photo
+      FACE_MATCHING_FAILED: "Face matching failed.", // Thrown when face matching fails
     },
 
     /**

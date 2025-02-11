@@ -1,97 +1,94 @@
-const Tesseract = require("tesseract.js"); // OCR library for extracting text from images
-const fs = require("fs"); // File system module for file operations
-const { preprocessImage } = require("../utilities/ocr/preprocessImage"); // Preprocessing utility for enhancing image quality
-const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages"); // Standardized error messages
+const Tesseract = require("tesseract.js");
+const fs = require("fs");
+const { preprocessImage } = require("../utilities/ocr/preprocessImage");
+const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
+
+const TESSDATA_PATH = process.env.TESSDATA_PATH || "/app/tessdata";
 
 /**
- * Perform OCR (Optical Character Recognition) on an image file.
+ * @summary Performs OCR on an image file.
+ * @description Preprocesses the image, performs OCR using Tesseract.js, and extracts the text.
  *
- * This function preprocesses the image, performs OCR using Tesseract.js, and extracts the text from the image.
- *
- * @param {string} filePath - The path to the image file to be processed.
- * @returns {Promise<string>} - The extracted text from the image.
- * @throws {Error} - Throws an error if OCR fails or the image cannot be processed.
+ * @param {string} filePath - The path to the image file.
+ * @returns {Promise<string>} The extracted text from the image.
+ * @throws {Error} Throws an error if OCR fails or the image cannot be processed.
  */
-
-// Perform OCR on the preprocessed image
 const performOCR = async (filePath) => {
+  let processedPath;
   try {
-    // Preprocess the image for better OCR accuracy
-    const processedPath = await preprocessImage(filePath);
-    const tessdataPath = "/app/tessdata"; // Path to the Tesseract language data
-
-    // Perform OCR using Tesseract.js
+    processedPath = await preprocessImage(filePath);
     const {
       data: { text },
     } = await Tesseract.recognize(processedPath, "eng", {
-      langPath: tessdataPath, // Specify custom language data path
+      langPath: TESSDATA_PATH,
     });
-
-    // Remove the processed image file after OCR
-    fs.unlinkSync(processedPath);
-
-    // Return the extracted text
     return text;
   } catch (error) {
-    // Log the error for debugging
     console.error(`[OCR_ERROR]: ${error.message}`, {
       filePath,
       stack: error.stack,
     });
-
-    // Throw a user-friendly error message
     throw new Error(ERROR_MESSAGES.OCR.TEXT_EXTRACTION_FAILED);
+  } finally {
+    if (processedPath) {
+      try {
+        await fs.promises.unlink(processedPath);
+      } catch (cleanupError) {
+        console.error(`[FILE_CLEANUP_ERROR]: ${cleanupError.message}`, {
+          processedPath,
+        });
+      }
+    }
   }
 };
 
 /**
- * Extracts MRZ (Machine Readable Zone) text from an ID card.
- * @param {string} filePath - Path to the back image of the ID.
- * @returns {Promise<string>} - Extracted MRZ text.
+ * @summary Extracts MRZ text from an ID card image.
+ * @description Preprocesses the image, performs OCR using Tesseract.js with the "ocrb" language, and formats the MRZ text.
+ *
+ * @param {string} filePath - The path to the image file.
+ * @returns {Promise<string>} The formatted MRZ text.
+ * @throws {Error} Throws an error if MRZ extraction fails.
  */
 const extractMRZ = async (filePath) => {
+  let processedPath;
   try {
-    const processedPath = await preprocessImage(filePath);
-    const tessdataPath = "/app/tessdata";
-
+    processedPath = await preprocessImage(filePath);
     const {
       data: { text },
     } = await Tesseract.recognize(processedPath, "ocrb", {
-      langPath: tessdataPath,
+      langPath: TESSDATA_PATH,
     });
-
-    fs.unlinkSync(processedPath);
-
-    console.log("Extracted Raw MRZ Text:\n", text);
-
-    // Clean up the extracted text
     const lines = text
       .split("\n")
-      .map((line) => line.replace(/\s/g, "")) // Remove all spaces
-      .filter((line) => /^[A-Z0-9<]+$/.test(line) && line.length > 20); // Keep only valid MRZ-like lines
-
-    // Start keeping lines **only when we find an ID pattern**
+      .map((line) => line.replace(/\s/g, ""))
+      .filter((line) => /^[A-Z0-9<]+$/.test(line) && line.length > 20);
     const mrzStartIndex = lines.findIndex((line) =>
       /^ID[A-Z]{3}[0-9<]+$/.test(line)
     );
     if (mrzStartIndex === -1 || lines.length - mrzStartIndex < 3) {
       throw new Error(
-        "Invalid MRZ format: 'IDBGR' not found or incomplete MRZ."
+        "Invalid MRZ format: ID pattern not found or incomplete MRZ."
       );
     }
-
-    // Extract the last 3 lines after finding IDBGR
     const mrzLines = lines.slice(mrzStartIndex, mrzStartIndex + 3);
-
-    console.log("Filtered MRZ Lines:\n", mrzLines);
-
-    return mrzLines.join("\n"); // Return properly formatted MRZ
+    return mrzLines.join("\n");
   } catch (error) {
     console.error(`[MRZ_ERROR]: ${error.message}`, {
       filePath,
       stack: error.stack,
     });
-    throw new Error("MRZ extraction failed.");
+    throw new Error(ERROR_MESSAGES.OCR.TEXT_EXTRACTION_FAILED);
+  } finally {
+    if (processedPath) {
+      try {
+        await fs.promises.unlink(processedPath);
+      } catch (cleanupError) {
+        console.error(`[FILE_CLEANUP_ERROR]: ${cleanupError.message}`, {
+          processedPath,
+        });
+      }
+    }
   }
 };
 

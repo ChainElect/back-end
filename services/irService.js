@@ -1,113 +1,80 @@
+const path = require("path");
 const faceapi = require("../utilities/ir/faceApiSetup");
 const loadImage = require("../utilities/ir/processing/loadImage");
 const cropFace = require("../utilities/ir/processing/cropFace");
-const { initializeModels } = require("../utilities/ir/models/initializeModels");
-const { compareDescriptors } = require("../utilities/ir/compareDescriptors");
+const extractDescriptor = require("../utilities/ir/extractDescriptor");
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 
 /**
- * Detects and extracts a face from an image file.
+ * @summary Detects and extracts a face from an image file.
+ * @description Loads an image, performs face detection with landmarks,
+ * and then crops the detected face using the bounding box provided by the detection.
  *
- * @param {string} imagePath - Path to the image file.
- * @returns {Promise<string>} - The path to the cropped face image.
+ * @param {string} imagePath - The file path of the image.
+ * @returns {Promise<string>} Resolves with the file path of the cropped face image.
+ * @throws {Error} Throws an error if no face is detected or cropping fails.
  */
 const detectAndExtractFace = async (imagePath) => {
   try {
-    console.log("[INFO]: imagepath islallala:", imagePath);
+    // Load the image (should return a canvas or a compatible object)
     const imgCanvas = await loadImage(imagePath);
-    console.log("[INFO]: canvas:", imgCanvas);
+
+    // Perform face detection with landmarks (without the descriptor)
     const detection = await faceapi
       .detectSingleFace(imgCanvas)
       .withFaceLandmarks();
 
+    // If no face is detected, throw an error with t`he standardized message
     if (!detection) {
       throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
     }
 
+    // Retrieve the bounding box for cropping the face
     const faceRegion = detection.detection.box;
-    const croppedFacePath = `${imagePath}-cropped.jpg`;
+    const { dir, name } = path.parse(imagePath);
+    const croppedFacePath = path.join(dir, `${name}-cropped.jpg`);
 
+    // Crop the image using the detected bounding box and save the result
     await cropFace(imgCanvas, faceRegion, croppedFacePath);
+
     return croppedFacePath;
   } catch (error) {
     console.error("[DETECT_AND_EXTRACT_FACE_ERROR]:", error.message, {
       imagePath,
     });
+    // Rethrow a generic error message for face extraction failures
     throw new Error(ERROR_MESSAGES.IR.FACE_EXTRACTION_FAILED);
   }
 };
 
 /**
- * Processes and compares two face images: selfie and ID card.
+ * @summary Extracts a face descriptor from a selfie image.
+ * @description Uses a default confidence threshold appropriate for selfie images.
  *
- * @param {string} selfiePath - Path to the selfie image.
- * @param {string} idCardPath - Path to the ID card image.
- * @returns {Promise<boolean>} - True if faces match, otherwise false.
+ * @param {string} imagePath - The file path of the selfie image.
+ * @returns {Promise<Float32Array>} Resolves with the face descriptor.
+ * @throws {Error} Throws an error if face detection or extraction fails.
  */
-const processAndCompareFaces = async (selfiePath, idCardPath) => {
-  try {
-    // Initialize the models
-    await initializeModels();
-
-    // Detect and crop the face from the selfie
-    const croppedSelfiePath = await detectAndExtractFace(selfiePath);
-
-    // Detect and crop the face from the ID card
-    const croppedIDCardPath = await detectAndExtractFace(idCardPath);
-
-    // Extract descriptors for the cropped images
-    const selfieDescriptor = await extractDescriptor(croppedSelfiePath, {
-      detector: new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 }),
-    });
-    const idCardDescriptor = await extractDescriptor(croppedIDCardPath, {
-      detector: new faceapi.TinyFaceDetectorOptions({
-        inputSize: 320,
-        scoreThreshold: 0.2,
-      }),
-    });
-
-    // Compare descriptors
-    return compareDescriptors(selfieDescriptor, idCardDescriptor);
-  } catch (error) {
-    console.error("[PROCESS_COMPARE_FACES_ERROR]:", error.message, {
-      selfiePath,
-      idCardPath,
-    });
-    throw new Error(ERROR_MESSAGES.IR.FACE_COMPARISON_FAILED);
-  }
+const extractDescriptorFromSelfie = async (imagePath) => {
+  // Selfies typically use a higher confidence threshold (0.5)
+  return extractDescriptor(imagePath, 0.5);
 };
 
 /**
- * Extracts a face descriptor from an image.
+ * @summary Extracts a face descriptor from an ID card image.
+ * @description Uses a slightly lower confidence threshold to accommodate different image qualities.
  *
- * @param {string} imagePath - Path to the image.
- * @param {object} options - Detection options for faceapi.
- * @returns {Promise<Float32Array>} - The face descriptor.
+ * @param {string} imagePath - The file path of the ID card image.
+ * @returns {Promise<Float32Array>} Resolves with the face descriptor.
+ * @throws {Error} Throws an error if face detection or extraction fails.
  */
-const extractDescriptor = async (imagePath, options) => {
-  try {
-    const imgCanvas = await loadImage(imagePath);
-    console.log(`[INFO]: Starting face detection for image: ${imagePath}`);
-    console.log(`[INFO]: Detection options:`, options);
-    const detection = await faceapi
-      .detectSingleFace(imgCanvas, options.detector)
-      .withFaceLandmarks()
-      .withFaceDescriptor();
-
-    if (!detection) {
-      throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
-    }
-
-    return detection.descriptor;
-  } catch (error) {
-    console.error("[EXTRACT_DESCRIPTOR_ERROR]:", error.message, {
-      imagePath,
-    });
-    throw error;
-  }
+const extractDescriptorFromIDCard = async (imagePath) => {
+  // ID cards typically use a lower confidence threshold (0.4)
+  return extractDescriptor(imagePath, 0.4);
 };
 
 module.exports = {
   detectAndExtractFace,
-  processAndCompareFaces,
+  extractDescriptorFromSelfie,
+  extractDescriptorFromIDCard,
 };
