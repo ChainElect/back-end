@@ -1,6 +1,6 @@
 const express = require("express");
 const pool = require("../config/db"); // Database connection
-const authMiddleware = require("../authMiddleware"); // Middleware for authentication
+const authMiddleware = require("../middlewares/authMiddleware"); // Middleware for authentication
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
 

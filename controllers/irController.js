@@ -1,4 +1,9 @@
-// controllers/irController.js
+/**
+ * @module irController
+ * @description Controller for handling image recognition (IR) operations,
+ * including face image uploads and face matching.
+ */
+
 const {
   extractDescriptorFromSelfie,
   extractDescriptorFromIDCard,
@@ -7,7 +12,6 @@ const {
 const { initializeModels } = require("../utilities/ir/models/initializeModels");
 
 exports.uploadFaceImage = (req, res) => {
-  // Your implementation here
   const filePath = req.file?.path;
   if (!filePath) {
     return res.status(400).json({
@@ -19,7 +23,6 @@ exports.uploadFaceImage = (req, res) => {
 };
 
 exports.matchFace = async (req, res) => {
-  // Your implementation here
   const { selfieFacePath, idCardFacePath } = req.body;
   if (!selfieFacePath || !idCardFacePath) {
     return res.status(400).json({
@@ -28,7 +31,7 @@ exports.matchFace = async (req, res) => {
     });
   }
   try {
-    // (Assuming you already have initializeModels, extractDescriptorFromSelfie, etc.)
+    // Note: If model initialization is expensive, consider calling initializeModels once at startup.
     await initializeModels();
     const selfieDescriptor = await extractDescriptorFromSelfie(selfieFacePath);
     const idCardDescriptor = await extractDescriptorFromIDCard(idCardFacePath);
@@ -36,9 +39,10 @@ exports.matchFace = async (req, res) => {
     if (isMatch) {
       return res.json({ success: true, message: "Face matched successfully" });
     } else {
-      return res
-        .status(400)
-        .json({ success: false, message: "Face does not match the ID photo." });
+      return res.status(400).json({
+        success: false,
+        message: "Face does not match the ID photo.",
+      });
     }
   } catch (error) {
     return res.status(500).json({

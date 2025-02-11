@@ -1,3 +1,10 @@
+/**
+ * @module ocrController
+ * @description Controller for handling ID document processing, including uploading
+ * the front and back images of an ID, extracting and parsing MRZ data, validating
+ * the ID document, and storing validated data in the database.
+ */
+
 const fs = require("fs");
 const { extractMRZ } = require("../services/ocrService");
 const userModel = require("../models/userModel");
@@ -5,7 +12,7 @@ const { parseMRZ } = require("../utilities/ocr/mrzExtractor");
 
 /**
  * Upload the front side of the ID.
- * Now, we only return the file path since we don't perform OCR on the front image.
+ * Currently, we only return the file path since no OCR is performed on the front image.
  */
 exports.uploadAndProcessIDFront = async (req, res) => {
   const frontPath = req.file?.path;
@@ -15,7 +22,7 @@ exports.uploadAndProcessIDFront = async (req, res) => {
       message: "Front image is required.",
     });
   }
-  res.json({
+  return res.json({
     success: true,
     frontPath,
   });
@@ -39,14 +46,21 @@ exports.uploadAndProcessIDBack = async (req, res) => {
     const mrzText = await extractMRZ(backPath);
     const mrzData = parseMRZ(mrzText);
 
-    res.json({
+    return res.json({
       success: true,
       backPath,
       extractedData: mrzData,
     });
   } catch (error) {
-    if (fs.existsSync(backPath)) fs.unlinkSync(backPath);
-    res.status(500).json({
+    // Asynchronously delete the file if it exists
+    try {
+      if (fs.existsSync(backPath)) {
+        await fs.promises.unlink(backPath);
+      }
+    } catch (cleanupError) {
+      console.error("Error during file cleanup:", cleanupError.message);
+    }
+    return res.status(500).json({
       success: false,
       message: "Failed to process the back image.",
       error: error.message,
@@ -55,7 +69,7 @@ exports.uploadAndProcessIDBack = async (req, res) => {
 };
 
 /**
- * Final verification endpoint that now relies solely on data extracted from the back (MRZ) image.
+ * Final verification endpoint that relies on data extracted from the back (MRZ) image.
  * Expects the backPath in the request body (frontPath is optional and may be used for UI or face matching).
  */
 exports.validateIDDocument = async (req, res) => {
@@ -73,17 +87,29 @@ exports.validateIDDocument = async (req, res) => {
     const mrzText = await extractMRZ(backPath);
     const mrzData = parseMRZ(mrzText);
 
-    // Optionally clean up the uploaded back image after processing
-    if (fs.existsSync(backPath)) fs.unlinkSync(backPath);
+    // Asynchronously clean up the uploaded back image after processing
+    try {
+      if (fs.existsSync(backPath)) {
+        await fs.promises.unlink(backPath);
+      }
+    } catch (cleanupError) {
+      console.error("Error during file cleanup:", cleanupError.message);
+    }
 
-    res.json({
+    return res.json({
       success: true,
       message: "ID validation successful",
       extractedData: mrzData,
     });
   } catch (error) {
-    if (fs.existsSync(backPath)) fs.unlinkSync(backPath);
-    res.status(500).json({
+    try {
+      if (fs.existsSync(backPath)) {
+        await fs.promises.unlink(backPath);
+      }
+    } catch (cleanupError) {
+      console.error("Error during file cleanup:", cleanupError.message);
+    }
+    return res.status(500).json({
       success: false,
       message: "ID validation failed.",
       error: error.message,
@@ -92,7 +118,7 @@ exports.validateIDDocument = async (req, res) => {
 };
 
 /**
- * Store Validated Data in the database.
+ * Store validated data in the database.
  */
 exports.storeValidatedData = async (req, res) => {
   const { name, dob, idNumber } = req.body;
@@ -106,9 +132,9 @@ exports.storeValidatedData = async (req, res) => {
 
   try {
     const user = await userModel.saveUser({ name, dob, idNumber });
-    res.json({ success: true, user });
+    return res.json({ success: true, user });
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: "Failed to save user data.",
       error: error.message,
