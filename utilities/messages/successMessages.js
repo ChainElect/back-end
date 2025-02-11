@@ -24,5 +24,11 @@ module.exports = {
       OPERATION_COMPLETED: "Operation completed successfully", // Indicates that a generic operation finished successfully
       PROTECTED_ROUTE_ACCESS: "You have access to this protected route", // Indicates that a user successfully accessed a protected route
     },
+    IR: {
+      FACE_MATCHED: "Face matched successfully", // Indicates that a face match was successful
+    },
+    OCR: {
+      ID_VALIDATION_SUCCESS: "ID validation successful", // Indicates that ID validation was successful
+    },
   },
 };

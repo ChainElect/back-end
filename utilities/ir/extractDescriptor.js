@@ -29,7 +29,9 @@ const extractDescriptor = async (imagePath, minConfidence) => {
       throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
     }
 
-    console.log("Detection box:", detection.detection.box);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("Detection box:", detection.detection.box);
+    }
     return detection.descriptor;
   } catch (error) {
     console.error("[EXTRACT_DESCRIPTOR_ERROR]:", error.message, { imagePath });

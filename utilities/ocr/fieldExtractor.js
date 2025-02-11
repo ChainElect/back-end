@@ -37,7 +37,9 @@ const extractField = (text, fieldName, regex = null) => {
  * @returns {Object} An object containing the extracted fields.
  */
 const extractIDFields = (text) => {
-  console.log("Extracting ID fields from text:", text);
+  if (process.env.NODE_ENV !== "production") {
+    console.log("Extracting ID fields from text:", text);
+  }
   return {
     // Extract "Name"
     name: extractField(text, "Name", /\bName\s*[:\-]?\s*([A-Za-z]+)\b/i),
@@ -73,7 +75,10 @@ const extractIDFields = (text) => {
  */
 const validateIDData = (frontText) => {
   const fields = extractIDFields(frontText);
-  console.log("[INFO]: fields:", fields);
+
+  if (process.env.NODE_ENV !== "production") {
+    console.log("[INFO]: fields:", fields);
+  }
 
   const missingFields = [];
   ["surname", "name", "fathersName", "idNumber"].forEach((field) => {

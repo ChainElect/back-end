@@ -1,5 +1,6 @@
+require("./instrument");
+
 const express = require("express");
-const Sentry = require("@sentry/node");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
@@ -12,16 +13,6 @@ const irRoutes = require("./routes/irRoutes");
 dotenv.config();
 
 const app = express();
-
-// Initialize Sentry as early as possible
-Sentry.init({
-  dsn: process.env.SENTRY_DSN, // Ensure this is set in your .env file
-  environment: process.env.NODE_ENV || "development",
-  tracesSampleRate: 0.2, // Adjust the sample rate as needed
-});
-
-// The Sentry request handler should be the first middleware
-app.use(Sentry.Handlers.requestHandler());
 
 // Configure CORS
 app.use(
@@ -49,15 +40,12 @@ app.use(partyRoutes);
 app.use(ocrRoutes);
 app.use(irRoutes);
 
-// Catch-all route for the React SPA (must come after static middleware and API routes)
+// Catch-all route for the React SPA
 app.get("*", (req, res) => {
   res.sendFile(path.join(reactBuildPath, "index.html"));
 });
 
-// The Sentry error handler should be registered after your routes
-app.use(Sentry.Handlers.errorHandler());
-
-// Fallback error handler (if needed)
+// Fallback error handler
 app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: "Internal Server Error" });
 });

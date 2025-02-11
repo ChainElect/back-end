@@ -21,7 +21,9 @@ const initializeModels = async () => {
       faceapi.nets.faceRecognitionNet.loadFromDisk(MODEL_PATHS.faceRecognition),
     ]);
 
-    console.log("All models loaded successfully.");
+    if (process.env.NODE_ENV !== "production") {
+      console.log("All models loaded successfully.");
+    }
   } catch (error) {
     console.error("[MODEL_INITIALIZATION_ERROR]:", error);
     throw new Error(ERROR_MESSAGES.IR.MODEL_INITIALIZATION_FAILED);

@@ -10,6 +10,9 @@ const { extractMRZ } = require("../services/ocrService");
 const userModel = require("../models/userModel");
 const { parseMRZ } = require("../utilities/ocr/mrzExtractor");
 
+const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
+const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
+
 /**
  * Upload the front side of the ID.
  * Currently, we only return the file path since no OCR is performed on the front image.
@@ -19,7 +22,7 @@ exports.uploadAndProcessIDFront = async (req, res) => {
   if (!frontPath) {
     return res.status(400).json({
       success: false,
-      message: "Front image is required.",
+      message: ERROR_MESSAGES.OCR.FRONT_IMAGE_REQUIRED,
     });
   }
   return res.json({
@@ -37,7 +40,7 @@ exports.uploadAndProcessIDBack = async (req, res) => {
   if (!backPath) {
     return res.status(400).json({
       success: false,
-      message: "Back image is required.",
+      message: ERROR_MESSAGES.OCR.BACK_IMAGE_REQUIRED,
     });
   }
 
@@ -63,7 +66,7 @@ exports.uploadAndProcessIDBack = async (req, res) => {
     Sentry.captureException(error);
     return res.status(500).json({
       success: false,
-      message: "Failed to process the back image.",
+      message: ERROR_MESSAGES.OCR.BACK_IMAGE_PROCESSING_FAILED,
       error: error.message,
     });
   }
@@ -78,8 +81,7 @@ exports.validateIDDocument = async (req, res) => {
   if (!backPath) {
     return res.status(400).json({
       success: false,
-      message:
-        "Missing ID document back image file path. Upload the back image first.",
+      message: ERROR_MESSAGES.OCR.MISSING_ID_BACK_IMAGE,
     });
   }
 
@@ -99,7 +101,7 @@ exports.validateIDDocument = async (req, res) => {
 
     return res.json({
       success: true,
-      message: "ID validation successful",
+      message: SUCCESS_MESSAGES.OCR.ID_VALIDATION_SUCCESS,
       extractedData: mrzData,
     });
   } catch (error) {
@@ -113,7 +115,7 @@ exports.validateIDDocument = async (req, res) => {
     Sentry.captureException(error);
     return res.status(500).json({
       success: false,
-      message: "ID validation failed.",
+      message: ERROR_MESSAGES.OCR.ID_VALIDATION_FAILED,
       error: error.message,
     });
   }
@@ -128,7 +130,7 @@ exports.storeValidatedData = async (req, res) => {
   if (!name || !dob || !idNumber) {
     return res.status(400).json({
       success: false,
-      message: "Name, DOB, and ID number are required.",
+      message: ERROR_MESSAGES.OCR.VALIDATED_DATA_REQUIRED,
     });
   }
 
@@ -139,7 +141,7 @@ exports.storeValidatedData = async (req, res) => {
     Sentry.captureException(error);
     return res.status(500).json({
       success: false,
-      message: "Failed to save user data.",
+      message: ERROR_MESSAGES.OCR.FAILED_TO_SAVE_USER_DATA,
       error: error.message,
     });
   }
