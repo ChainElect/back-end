@@ -1,16 +1,18 @@
 const faceapi = require("./faceApiSetup");
 
 /**
- * Compares two face descriptors to determine if they match.
+ * @summary Compares two face descriptors using Euclidean distance.
+ * @description If the distance between the descriptors is below the specified threshold,
+ * the function returns true, indicating a match.
  *
- * @param {Float32Array} descriptor1 - First face descriptor.
- * @param {Float32Array} descriptor2 - Second face descriptor.
- * @param {number} [threshold=0.6] - Threshold for matching.
- * @returns {boolean} - True if the descriptors match, false otherwise.
+ * @param {Float32Array} descriptor1 - The first face descriptor.
+ * @param {Float32Array} descriptor2 - The second face descriptor.
+ * @param {number} [threshold=0.6] - The matching threshold.
+ * @returns {boolean} True if the descriptors match (distance is below threshold), else false.
  */
 const compareDescriptors = (descriptor1, descriptor2, threshold = 0.6) => {
   const distance = faceapi.euclideanDistance(descriptor1, descriptor2);
-  console.log(`[DESCRIPTOR_COMPARISON]: Distance = ${distance}`);
+  console.log(`Distance between descriptors: ${distance}`);
   return distance < threshold;
 };
 

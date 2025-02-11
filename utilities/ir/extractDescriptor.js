@@ -3,15 +3,14 @@ const loadImage = require("./processing/loadImage");
 const { ERROR_MESSAGES } = require("../../utilities/messages/errorMessages");
 
 /**
- * Extracts a face descriptor from an image.
- *
- * This function loads an image, performs face detection with landmarks and descriptor,
+ * @summary Extracts a face descriptor from an image.
+ * @description Loads an image, performs face detection with landmarks and descriptor,
  * and returns the face descriptor if detection is successful.
  *
  * @param {string} imagePath - The file path of the image.
  * @param {number} minConfidence - The minimum confidence level for detection.
- * @returns {Promise<Float32Array>} - Resolves with the face descriptor.
- * @throws {Error} - Throws an error if no face is detected or descriptor extraction fails.
+ * @returns {Promise<Float32Array>} Resolves with the face descriptor.
+ * @throws {Error} Throws an error if no face is detected or descriptor extraction fails.
  */
 const extractDescriptor = async (imagePath, minConfidence) => {
   try {
