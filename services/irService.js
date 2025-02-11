@@ -24,7 +24,7 @@ const detectAndExtractFace = async (imagePath) => {
       .detectSingleFace(imgCanvas)
       .withFaceLandmarks();
 
-    // If no face is detected, throw an error with the standardized message
+    // If no face is detected, throw an error with t`he standardized message
     if (!detection) {
       throw new Error(ERROR_MESSAGES.IR.NO_FACE_DETECTED);
     }
