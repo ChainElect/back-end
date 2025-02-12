@@ -39,5 +39,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/${{ steps.owner.outputs.owner }}/my-app:latest
-            ghcr.io/${{ steps.owner.outputs.owner }}/my-app:${{ github.sha }}
+            ghcr.io/${{ steps.owner.outputs.owner }}/chain-elect-backend:latest
+            ghcr.io/${{ steps.owner.outputs.owner }}/chain-elect-backend:${{ github.sha }}
