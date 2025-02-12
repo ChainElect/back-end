@@ -1,2 +1,48 @@
+# Node.js dependencies
 node_modules/
+
+# Environment Variables
 .env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Build artifacts and generated files
+build/
+artifacts/
+artifacts/build-info/
+artifacts/contracts/*.json
+coverage/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS-specific & IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test coverage reports
+/coverage
+/coverage-final.json
+/lcov-report/
+jest-html-reporters-*.html
+*.lcov
+
+# Uploads and runtime-generated files
+uploads/
+
+# Docker files (if unnecessary)
+.dockerignore
+docker-compose.yml
+
+# Ignore GitHub workflows (only if not tracking CI/CD)
+# .github/
