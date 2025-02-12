@@ -44,6 +44,7 @@ echo "JWT_SECRET=your_jwt_secret" >> .env
 echo "BLOCKCHAIN_NODE_URL=your_blockchain_node_url" >> .env
 ```
 Replace your_database_connection_string, your_jwt_secret, and your_blockchain_node_url with actual values.
+
 ---
 ## 🚀 Running the Application
 ```bash
@@ -54,6 +55,7 @@ npm run dev
 npm start
 ```
 Ensure that all environment variables are properly configured before starting the application in production mode.
+
 ---
 ## 🧪 Running Tests
 ```bash
@@ -73,9 +75,11 @@ docker build -t chainelect-backend .
 docker run -p 5000:5000 --env-file .env chainelect-backend
 ```
 Ensure that your .env file is correctly configured and accessible to the Docker container.
+
 ---
 
 ## 📄 License
 
 This project is licensed under the MIT License. See the LICENSE file for details.
+
 ---
