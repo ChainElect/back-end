@@ -1,4 +1,4 @@
-name: Run Tests and Upload Coverage
+name: Codecov Coverage Report
 
 on:
   push:
@@ -9,16 +9,28 @@ on:
       - main
 
 jobs:
-  test:
+  coverage:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcairo2-dev \
+            libjpeg-dev \
+            libpango1.0-dev \
+            libgif-dev \
+            libpixman-1-dev
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '18.x'
+          cache: 'npm'
 
       - name: Install dependencies
         run: npm install
@@ -34,3 +46,6 @@ jobs:
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          fail_ci_if_error: true
+          verbose: true
