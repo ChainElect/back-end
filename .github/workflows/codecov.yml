@@ -23,8 +23,12 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Set environment variables from secrets
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> $GITHUB_ENV
+
       - name: Run tests with coverage
-        run: npm test -- --coverage
+        run: npm test
 
       - name: Upload coverage reports to Codecov
         uses: codecov/codecov-action@v5
