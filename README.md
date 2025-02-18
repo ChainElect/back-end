@@ -15,6 +15,12 @@
 
 ---
 
+## 📜 API Documentation
+
+View our API documentation on [Bump.sh](https://bump.sh/ibsolutions/hub/chainelect/doc/chainelect-backend/).
+
+---
+
 ## 🏗️ Tech Stack
 
 - **Backend**: Node.js, Express.js
