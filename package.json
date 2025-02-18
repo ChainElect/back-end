@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "jest --coverage"
+    "test": "jest --coverage",
+    "generate:openapi": "node src/config/swagger.js"
   },
   "keywords": [],
   "author": "",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "jest": "^29.7.0",
-    "supertest": "^7.0.0"
+    "supertest": "^7.0.0",
+    "swagger-autogen": "^2.23.7"
   }
 }
