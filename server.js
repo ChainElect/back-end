@@ -9,10 +9,13 @@ const authRoutes = require("./routes/authRoutes");
 const partyRoutes = require("./routes/partyRoutes");
 const ocrRoutes = require("./routes/ocrRoutes");
 const irRoutes = require("./routes/irRoutes");
+const { swaggerSpec } = require("./config/swagger");
+const swaggerUi = require("swagger-ui-express");
 
 dotenv.config();
 
 const app = express();
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 // Configure CORS
 app.use(
