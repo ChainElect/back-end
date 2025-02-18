@@ -28,17 +28,17 @@ jobs:
         run: npm install
 
       - name: Generate OpenAPI spec
-        run: npm run generate:openapi # Update this command based on your project
+        run: npm run generate:openapi
 
       - name: Verify OpenAPI spec exists
-        run: ls -lah docs/  # Check if the file was generated correctly
+        run: ls -lah src/docs/  # <-- Changed from docs/ to src/docs/
 
       - name: Deploy API documentation
         uses: bump-sh/github-action@v1
         with:
-          doc: chainelect-backend  # Change to your actual Bump.sh documentation ID
+          doc: chainelect-backend
           token: ${{ secrets.BUMP_TOKEN }}
-          file: docs/openapi.yaml  # Update the path based on where your spec is generated
+          file: src/docs/openapi.yaml  # <-- Also updated path here
 
   api-diff:
     if: ${{ github.event_name == 'pull_request' }}
@@ -53,17 +53,17 @@ jobs:
         run: npm install
 
       - name: Generate OpenAPI spec
-        run: npm run generate:openapi  # Ensure this generates the spec
+        run: npm run generate:openapi
 
       - name: Verify OpenAPI spec exists
-        run: ls -lah docs/  # Check if the file was generated correctly
+        run: ls -lah src/docs/  # <-- Changed from docs/ to src/docs/
 
       - name: Comment pull request with API diff
         uses: bump-sh/github-action@v1
         with:
           doc: chainelect-backend
           token: ${{ secrets.BUMP_TOKEN }}
-          file: docs/openapi.yaml  # Update the path to the generated spec
+          file: src/docs/openapi.yaml  # <-- Also updated path
           command: diff
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
