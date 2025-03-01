@@ -4,10 +4,10 @@ const express = require("express");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const path = require("path");
-const authRoutes = require("./routes/authRoutes");
-const partyRoutes = require("./routes/partyRoutes");
-const ocrRoutes = require("./routes/ocrRoutes");
-const irRoutes = require("./routes/irRoutes");
+const authRoutes = require("./src/routes/authRoutes");
+const partyRoutes = require("./src/routes/partyRoutes");
+const ocrRoutes = require("./src/routes/ocrRoutes");
+const irRoutes = require("./src/routes/irRoutes");
 
 dotenv.config();
 

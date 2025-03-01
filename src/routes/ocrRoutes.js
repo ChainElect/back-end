@@ -8,8 +8,9 @@ const {
   validateIDDocument,
   storeValidatedData,
 } = require("../controllers/ocrController");
+const path = require("path");
 const router = express.Router();
-const upload = multer({ dest: "uploads/" });
+const upload = multer({ dest: path.join(__dirname, "../../uploads/") });
 
 // Combined endpoints for front and back upload and processing
 router.post(

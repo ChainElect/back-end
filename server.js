@@ -1,6 +1,8 @@
 const app = require("./app"); // Import the Express app
 const http = require("http");
-const { SUCCESS_MESSAGES } = require("./utilities/messages/successMessages");
+const {
+  SUCCESS_MESSAGES,
+} = require("./src/utilities/messages/successMessages");
 
 const PORT = process.env.PORT || 5000;
 
