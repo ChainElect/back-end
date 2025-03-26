@@ -4,7 +4,7 @@ const {
   SUCCESS_MESSAGES,
 } = require("./src/utilities/messages/successMessages");
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Create an HTTP server and start listening
 const server = http.createServer(app);
