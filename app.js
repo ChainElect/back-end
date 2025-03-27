@@ -16,7 +16,7 @@ const app = express();
 // Configure CORS
 app.use(
   cors({
-    origin: process.env.FRONTEND_ORIGIN || "http://localhost:3000",
+    origin: process.env.FRONTEND_ORIGIN || "https://chainelect.org",
     methods: process.env.ALLOWED_METHODS
       ? process.env.ALLOWED_METHODS.split(",")
       : ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
