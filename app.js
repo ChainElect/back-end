@@ -16,16 +16,6 @@ const app = express();
 // Trust first proxy (NGINX)
 app.set("trust proxy", 1);
 
-// Configure CORS
-app.use(
-  cors({
-    origin: process.env.FRONTEND_ORIGIN || "https://chainelect.org",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "Baggage", "Sentry-Trace"],
-    credentials: true
-  })
-);
-
 // Security headers middleware
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
