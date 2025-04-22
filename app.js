@@ -8,6 +8,9 @@ const authRoutes = require("./src/routes/authRoutes");
 const partyRoutes = require("./src/routes/partyRoutes");
 const ocrRoutes = require("./src/routes/ocrRoutes");
 const irRoutes = require("./src/routes/irRoutes");
+const registrationRoutes = require("./src/routes/registrationRoutes");
+const voteRoutes = require("./src/routes/voteRoutes");
+const zkpVotingRoutes = require("./src/routes/zkpVotingRoutes");
 
 dotenv.config();
 
@@ -36,6 +39,9 @@ app.use("/api/auth", authRoutes);
 app.use("/api/party", partyRoutes);
 app.use("/api/ocr", ocrRoutes);
 app.use("/api/ir", irRoutes);
+app.use("/api/registration", registrationRoutes);
+app.use("/api/vote", voteRoutes);
+app.use("/api/zkp", zkpVotingRoutes); 
 
 // Catch-all route for the React SPA
 app.get("*", (req, res) => {
