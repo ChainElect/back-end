@@ -1,11 +1,10 @@
-// src/services/zkpService.js
 const { ethers } = require("ethers");
 const { buildMimcSponge } = require("circomlibjs");
 const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const snarkjs = require("snarkjs");
-const merkleTreeService = require("./merkleTreeService");
+const merkleTreeModel = require("../models/merkleTreeModel");
 
 // Constants
 const TREE_LEVELS = 20;
@@ -44,14 +43,126 @@ async function generateCommitment() {
   };
 }
 
-// Add a new commitment to the Merkle tree
-async function addCommitment(commitment, userId = null) {
+// Recreate a commitment from existing nullifier and secret
+async function recreateCommitment(nullifier, secret) {
   await initialize();
   
-  // Use the merkleTreeService to add the commitment
-  const newRoot = await merkleTreeService.addCommitment(commitment, userId);
+  // Calculate commitment from nullifier and secret
+  const commitment = mimc.F.toString(mimc.multiHash([nullifier.toString(), secret.toString()]));
   
-  return newRoot;
+  // Calculate nullifier hash
+  const nullifierHash = mimc.F.toString(mimc.multiHash([nullifier.toString()]));
+  
+  return {
+    nullifier: nullifier.toString(),
+    secret: secret.toString(),
+    commitment: commitment,
+    nullifierHash: nullifierHash
+  };
+}
+
+// Calculate hash of two child nodes
+function calculateHash(left, right) {
+  return mimc.F.toString(mimc.multiHash([left.toString(), right.toString()]));
+}
+
+// Generate zero elements for the Merkle tree
+function generateZeros() {
+  const zeros = [];
+  zeros[0] = BigInt('21663839004416932945382355908790599225266501822907911457504978515578255421292'); // ZERO_VALUE from the smart contract
+  for (let i = 1; i <= TREE_LEVELS; i++) {
+    zeros[i] = calculateHash(zeros[i - 1], zeros[i - 1]);
+  }
+  return zeros;
+}
+
+// Add a new commitment to the Merkle tree
+async function addCommitment(commitment) {
+  await initialize();
+  
+  // Get all existing commitments from the database
+  const commitments = await merkleTreeModel.getAllCommitments();
+  
+  // Add new commitment
+  commitments.push(commitment);
+  
+  // Calculate new Merkle root and path
+  const result = calculateMerkleRootAndPath(commitments, commitment);
+  
+  // Save commitment to database
+  await merkleTreeModel.saveCommitment(commitment);
+  
+  // Save new root to database
+  await merkleTreeModel.saveRoot(result.root);
+  
+  return result.root;
+}
+
+// Calculate Merkle root and path for a given commitment
+function calculateMerkleRootAndPath(elements, targetElement) {
+  // Create zeros for empty nodes
+  const zeros = generateZeros();
+  
+  // Create layers for the tree
+  let layers = [];
+  layers[0] = elements.slice();
+  
+  // Build the tree
+  for (let level = 1; level <= TREE_LEVELS; level++) {
+    layers[level] = [];
+    for (let i = 0; i < Math.ceil(layers[level - 1].length / 2); i++) {
+      const left = layers[level - 1][i * 2];
+      const right = i * 2 + 1 < layers[level - 1].length ? layers[level - 1][i * 2 + 1] : zeros[level - 1];
+      layers[level][i] = calculateHash(left, right);
+    }
+  }
+  
+  // Get the root
+  const root = layers[TREE_LEVELS].length > 0 ? layers[TREE_LEVELS][0] : zeros[TREE_LEVELS];
+  
+  // Find the target element and compute its path
+  let pathElements = [];
+  let pathIndices = [];
+  
+  if (targetElement) {
+    let index = layers[0].findIndex(el => el === targetElement);
+    if (index !== -1) {
+      for (let level = 0; level < TREE_LEVELS; level++) {
+        pathIndices[level] = index % 2;
+        pathElements[level] = (index ^ 1) < layers[level].length ? layers[level][index ^ 1] : zeros[level];
+        index >>= 1;
+      }
+    }
+  }
+  
+  return {
+    root: root.toString(),
+    pathElements: pathElements.map((v) => v.toString()),
+    pathIndices: pathIndices.map((v) => v.toString())
+  };
+}
+
+// Get the Merkle path for a commitment
+async function getMerklePath(commitment) {
+  await initialize();
+  
+  // Get all commitments
+  const commitments = await merkleTreeModel.getAllCommitments();
+  
+  // Calculate root and path
+  return calculateMerkleRootAndPath(commitments, commitment);
+}
+
+// Get current Merkle root
+async function getMerkleRoot() {
+  // Get latest root from database
+  return await merkleTreeModel.getLatestRoot();
+}
+
+// Check if a commitment is in the tree
+async function isCommitmentInTree(commitment) {
+  const commitments = await merkleTreeModel.getAllCommitments();
+  return commitments.includes(commitment);
 }
 
 // Generate ZK proof for voting
@@ -59,9 +170,9 @@ async function generateVotingProof(nullifier, secret, commitment) {
   await initialize();
   
   // Get Merkle path for this commitment
-  const merklePath = await merkleTreeService.getMerklePath(commitment);
+  const merklePath = await getMerklePath(commitment);
   
-  if (!merklePath) {
+  if (!merklePath.pathElements.length) {
     throw new Error("Commitment not found in Merkle tree");
   }
   
@@ -69,7 +180,7 @@ async function generateVotingProof(nullifier, secret, commitment) {
   const input = {
     nullifier: nullifier,
     secret: secret,
-    pathElements: merklePath.pathElements,
+    pathElements: merklePath.pathElements, 
     pathIndices: merklePath.pathIndices
   };
   
@@ -82,7 +193,7 @@ async function generateVotingProof(nullifier, secret, commitment) {
       ZKEY_PATH
     );
     
-    // Convert proof to solidity calldata format
+    // Convert proof for Solidity
     const calldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
     
     // Parse calldata
@@ -111,40 +222,15 @@ async function generateVotingProof(nullifier, secret, commitment) {
   }
 }
 
-// Verify proof using verification key
-async function verifyProof(proof, publicSignals) {
-  try {
-    // Load verification key
-    const vKey = JSON.parse(fs.readFileSync(
-      path.join(__dirname, '../../circuits/build/verification_key.json')
-    ));
-    
-    // Verify the proof
-    const result = await snarkjs.groth16.verify(vKey, publicSignals, proof);
-    return result;
-  } catch (error) {
-    console.error("Error verifying proof:", error);
-    return false;
-  }
-}
-
-// Verify a commitment is in the tree
-async function isCommitmentInTree(commitment) {
-  return await merkleTreeService.isCommitmentInTree(commitment);
-}
-
-// Get current Merkle root
-async function getMerkleRoot() {
-  return await merkleTreeService.getMerkleRoot();
-}
-
 // Export functions
 module.exports = {
   initialize,
   generateCommitment,
+  recreateCommitment,
   addCommitment,
+  calculateMerkleRootAndPath,
+  getMerklePath,
+  getMerkleRoot,
   generateVotingProof,
-  verifyProof,
-  isCommitmentInTree,
-  getMerkleRoot
+  isCommitmentInTree
 };

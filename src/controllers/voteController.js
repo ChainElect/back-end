@@ -1,53 +1,72 @@
 const Sentry = require("@sentry/node");
-const { ethers } = require("ethers");
-const identityZkpBridgeService = require("../services/identityZkpBridgeService");
+const votingService = require("../services/votingService");
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
 const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
-const { ERC20_ABI, ERC20_ADDRESS } = require("../utils/wallet/walletConstants");
 
-// Initialize provider
-const provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-
-// Initialize wallet and contract
-const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-const votingContract = new ethers.Contract(ERC20_ADDRESS, ERC20_ABI, wallet);
-
-// Prepare vote data for ZKP
+/**
+ * Prepare vote data with ZKP
+ * @param {object} req - The request object
+ * @param {object} res - The response object
+ */
 exports.prepareVote = async (req, res) => {
-  const { nullifier, secret, electionId, partyId } = req.body;
+  const { electionId, partyId, userData } = req.body;
   
-  if (!nullifier || !secret || !electionId || !partyId) {
+  if (!electionId || !partyId) {
     return res.status(400).json({
       success: false,
-      message: "Nullifier, secret, election ID, and party ID are required."
+      message: "Election ID and party ID are required."
+    });
+  }
+  
+  if (!userData || !userData.nullifier || !userData.secret) {
+    return res.status(400).json({
+      success: false,
+      message: "Missing ZKP credentials (nullifier and secret)."
     });
   }
   
   try {
-    // Prepare vote data with ZKP
-    const voteData = await identityZkpBridgeService.prepareVoteData(
-      nullifier,
-      secret,
-      electionId,
-      partyId
-    );
+    // Get party name to include in the response (optional)
+    let partyName = "Unknown Party";
+    try {
+      const electionDetails = await votingService.getElectionDetails(electionId);
+      const party = electionDetails.parties.find(p => p.id === partyId);
+      if (party) {
+        partyName = party.name;
+      }
+    } catch (error) {
+      console.warn("Could not fetch party name:", error);
+      // Continue anyway - party name is optional
+    }
     
-    // Return voting data to frontend
+    // Prepare vote data with ZKP
+    const voteData = await votingService.prepareVote(electionId, partyId, userData);
+    
+    // Add party name to the response
+    voteData.partyName = partyName;
+    
     return res.status(200).json({
       success: true,
-      voteData
+      message: "Vote prepared successfully.",
+      data: voteData
     });
   } catch (error) {
+    console.error("Error preparing vote:", error);
     Sentry.captureException(error);
+    
     return res.status(500).json({
       success: false,
-      message: ERROR_MESSAGES.COMMON.SERVER_ERROR,
+      message: error.message || ERROR_MESSAGES.COMMON.SERVER_ERROR,
       error: error.message
     });
   }
 };
 
-// Cast a vote with ZKP
+/**
+ * Cast a vote with ZKP
+ * @param {object} req - The request object
+ * @param {object} res - The response object
+ */
 exports.castVote = async (req, res) => {
   const { 
     electionId, 
@@ -62,13 +81,22 @@ exports.castVote = async (req, res) => {
   if (!electionId || !partyId || !nullifierHash || !root || !proof_a || !proof_b || !proof_c) {
     return res.status(400).json({
       success: false,
-      message: "All vote parameters are required."
+      message: "Missing required vote parameters."
     });
   }
   
   try {
-    // Submit vote transaction
-    const tx = await votingContract.vote(
+    // Check if user has already voted with this nullifier
+    const hasVoted = await votingService.hasVoted(nullifierHash);
+    if (hasVoted) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already voted in this election."
+      });
+    }
+    
+    // Cast the vote
+    const result = await votingService.castVote({
       electionId,
       partyId,
       nullifierHash,
@@ -76,22 +104,121 @@ exports.castVote = async (req, res) => {
       proof_a,
       proof_b,
       proof_c
-    );
+    });
     
-    // Wait for transaction confirmation
-    const receipt = await tx.wait();
-    
-    // Return transaction receipt
     return res.status(200).json({
       success: true,
-      message: "Vote cast successfully",
-      txHash: receipt.transactionHash
+      message: "Vote cast successfully.",
+      data: result
     });
   } catch (error) {
+    console.error("Error casting vote:", error);
     Sentry.captureException(error);
+    
+    // Handle specific error cases
+    if (error.message.includes("already voted")) {
+      return res.status(400).json({
+        success: false,
+        message: "You have already voted in this election."
+      });
+    }
+    
     return res.status(500).json({
       success: false,
-      message: "Failed to cast vote",
+      message: error.message || "Failed to cast vote. Please try again.",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get election details
+ * @param {object} req - The request object
+ * @param {object} res - The response object
+ */
+exports.getElectionDetails = async (req, res) => {
+  const { electionId } = req.params;
+  
+  if (!electionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Election ID is required."
+    });
+  }
+  
+  try {
+    const electionDetails = await votingService.getElectionDetails(electionId);
+    
+    return res.status(200).json({
+      success: true,
+      data: electionDetails
+    });
+  } catch (error) {
+    console.error("Error getting election details:", error);
+    Sentry.captureException(error);
+    
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve election details.",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get election results
+ * @param {object} req - The request object
+ * @param {object} res - The response object
+ */
+exports.getElectionResults = async (req, res) => {
+  const { electionId } = req.params;
+  
+  if (!electionId) {
+    return res.status(400).json({
+      success: false,
+      message: "Election ID is required."
+    });
+  }
+  
+  try {
+    const results = await votingService.getElectionResults(electionId);
+    
+    return res.status(200).json({
+      success: true,
+      data: results
+    });
+  } catch (error) {
+    console.error("Error getting election results:", error);
+    Sentry.captureException(error);
+    
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve election results.",
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get all ongoing elections
+ * @param {object} req - The request object
+ * @param {object} res - The response object
+ */
+exports.getOngoingElections = async (req, res) => {
+  try {
+    const elections = await votingService.getOngoingElections();
+    
+    return res.status(200).json({
+      success: true,
+      data: elections
+    });
+  } catch (error) {
+    console.error("Error getting ongoing elections:", error);
+    Sentry.captureException(error);
+    
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve ongoing elections.",
       error: error.message
     });
   }
