@@ -125,7 +125,10 @@ function calculateMerkleRootAndPath(elements, targetElement) {
   let pathIndices = [];
   
   if (targetElement) {
-    let index = layers[0].findIndex(el => el === targetElement);
+    // Convert to string for safe comparison (BigInt gets stringified anyway)
+    const targetStr = targetElement.toString();
+    let index = layers[0].findIndex(el => el.toString() === targetStr);
+    
     if (index !== -1) {
       for (let level = 0; level < TREE_LEVELS; level++) {
         pathIndices[level] = index % 2;
@@ -162,7 +165,9 @@ async function getMerkleRoot() {
 // Check if a commitment is in the tree
 async function isCommitmentInTree(commitment) {
   const commitments = await merkleTreeModel.getAllCommitments();
-  return commitments.includes(commitment);
+  // Convert to strings for safe comparison
+  const targetStr = commitment.toString();
+  return commitments.some(c => c.toString() === targetStr);
 }
 
 // Generate ZK proof for voting

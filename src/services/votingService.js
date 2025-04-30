@@ -69,7 +69,12 @@ async function prepareVote(electionId, partyId, userData) {
       root: zkProof.root,
       proof_a: zkProof.proof_a,
       proof_b: zkProof.proof_b,
-      proof_c: zkProof.proof_c
+      proof_c: zkProof.proof_c,
+      // Store commitment data for reference
+      commitmentData: {
+        nullifier: userData.nullifier,
+        secret: userData.secret
+      }
     };
   } catch (error) {
     console.error("Error preparing vote:", error);

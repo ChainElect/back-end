@@ -6,6 +6,7 @@
  */
 const Sentry = require("@sentry/node");
 const fs = require("fs");
+const path = require("path");
 const { extractMRZ } = require("../services/ocrService");
 const userModel = require("../models/userModel");
 const { parseMRZ } = require("../utilities/ocr/mrzExtractor");
@@ -26,9 +27,13 @@ exports.uploadAndProcessIDFront = async (req, res) => {
       message: ERROR_MESSAGES.OCR.FRONT_IMAGE_REQUIRED,
     });
   }
+  
+  // Standardize path for cross-platform compatibility
+  const standardPath = frontPath.replace(/\\/g, '/');
+  
   return res.json({
     success: true,
-    frontPath,
+    frontPath: standardPath,
   });
 };
 
@@ -45,21 +50,24 @@ exports.uploadAndProcessIDBack = async (req, res) => {
     });
   }
 
+  // Standardize path for cross-platform compatibility
+  const standardPath = backPath.replace(/\\/g, '/');
+
   try {
     // Extract MRZ text and parse it
-    const mrzText = await extractMRZ(backPath);
+    const mrzText = await extractMRZ(standardPath);
     const mrzData = parseMRZ(mrzText);
 
     return res.json({
       success: true,
-      backPath,
+      backPath: standardPath,
       extractedData: mrzData,
     });
   } catch (error) {
     // Asynchronously delete the file if it exists
     try {
-      if (fs.existsSync(backPath)) {
-        await fs.promises.unlink(backPath);
+      if (fs.existsSync(standardPath)) {
+        await fs.promises.unlink(standardPath);
       }
     } catch (cleanupError) {
       console.error("Error during file cleanup:", cleanupError.message);
@@ -86,15 +94,18 @@ exports.validateIDDocument = async (req, res) => {
     });
   }
 
+  // Standardize path for cross-platform compatibility
+  const standardPath = backPath.replace(/\\/g, '/');
+
   try {
     // Extract and parse MRZ from the back image
-    const mrzText = await extractMRZ(backPath);
+    const mrzText = await extractMRZ(standardPath);
     const mrzData = parseMRZ(mrzText);
 
     // Asynchronously clean up the uploaded back image after processing
     try {
-      if (fs.existsSync(backPath)) {
-        await fs.promises.unlink(backPath);
+      if (fs.existsSync(standardPath)) {
+        await fs.promises.unlink(standardPath);
       }
     } catch (cleanupError) {
       console.error("Error during file cleanup:", cleanupError.message);
@@ -107,8 +118,8 @@ exports.validateIDDocument = async (req, res) => {
     });
   } catch (error) {
     try {
-      if (fs.existsSync(backPath)) {
-        await fs.promises.unlink(backPath);
+      if (fs.existsSync(standardPath)) {
+        await fs.promises.unlink(standardPath);
       }
     } catch (cleanupError) {
       console.error("Error during file cleanup:", cleanupError.message);

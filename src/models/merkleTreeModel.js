@@ -58,9 +58,12 @@ exports.getAllCommitments = async () => {
  */
 exports.saveCommitment = async (commitment, nullifierHash = null) => {
   try {
+    // Standardize commitment as string
+    const commitmentStr = commitment.toString();
+    
     const result = await pool.query(
       "INSERT INTO merkle_tree_commitments (commitment, nullifier_hash) VALUES ($1, $2) RETURNING *",
-      [commitment, nullifierHash]
+      [commitmentStr, nullifierHash]
     );
     return result.rows[0];
   } catch (error) {
@@ -76,9 +79,12 @@ exports.saveCommitment = async (commitment, nullifierHash = null) => {
  */
 exports.commitmentExists = async (commitment) => {
   try {
+    // Standardize commitment as string
+    const commitmentStr = commitment.toString();
+    
     const result = await pool.query(
       "SELECT 1 FROM merkle_tree_commitments WHERE commitment = $1",
-      [commitment]
+      [commitmentStr]
     );
     return result.rows.length > 0;
   } catch (error) {
@@ -94,9 +100,12 @@ exports.commitmentExists = async (commitment) => {
  */
 exports.nullifierExists = async (nullifierHash) => {
   try {
+    // Standardize nullifierHash as string
+    const nullifierHashStr = nullifierHash.toString();
+    
     const result = await pool.query(
       "SELECT 1 FROM merkle_tree_commitments WHERE nullifier_hash = $1 AND used = TRUE",
-      [nullifierHash]
+      [nullifierHashStr]
     );
     return result.rows.length > 0;
   } catch (error) {
@@ -112,9 +121,12 @@ exports.nullifierExists = async (nullifierHash) => {
  */
 exports.markNullifierUsed = async (nullifierHash) => {
   try {
+    // Standardize nullifierHash as string
+    const nullifierHashStr = nullifierHash.toString();
+    
     const result = await pool.query(
       "UPDATE merkle_tree_commitments SET used = TRUE WHERE nullifier_hash = $1",
-      [nullifierHash]
+      [nullifierHashStr]
     );
     return result.rowCount > 0;
   } catch (error) {
