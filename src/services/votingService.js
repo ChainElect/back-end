@@ -4,7 +4,7 @@ const merkleTreeModel = require('../models/merkleTreeModel');
 const { ERROR_MESSAGES } = require('../utilities/messages/errorMessages');
 
 // Load contract ABI and address from constants
-const { ERC20_ABI, ERC20_ADDRESS } = require('../utils/wallet/walletConstants');
+const { ERC20_ABI, ERC20_ADDRESS } = require('../utils/wallet/walletConstants.cjs');
 
 // Initialize provider
 let provider;
