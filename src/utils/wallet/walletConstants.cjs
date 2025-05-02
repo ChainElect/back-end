@@ -1,4 +1,4 @@
-export const ERC20_ABI = [
+const ERC20_ABI = [
   {
     inputs: [],
     stateMutability: "nonpayable",
@@ -468,6 +468,13 @@ export const ERC20_ABI = [
 ];
 
 // Standardize contract addresses across the app
-export const ERC20_ADDRESS = "0x92f93FD667d78cF3C98CF78d69F05F8927cbA5a2"; 
-export const ZKTree_ADDRESS = "0x570042DFa06E8E607cC6373067aD2885CB4845D1"; 
-export const Verifier_ADDRESS = "0xe7d04e13E747a9D4959596dbE33882F5a477953f";
+const ERC20_ADDRESS = "0x92f93FD667d78cF3C98CF78d69F05F8927cbA5a2"; 
+const ZKTree_ADDRESS = "0x570042DFa06E8E607cC6373067aD2885CB4845D1"; 
+const Verifier_ADDRESS = "0xe7d04e13E747a9D4959596dbE33882F5a477953f";
+
+module.exports = {
+  ERC20_ABI,
+  ERC20_ADDRESS,
+  ZKTree_ADDRESS,
+  Verifier_ADDRESS
+};
