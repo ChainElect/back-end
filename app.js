@@ -19,6 +19,25 @@ const app = express();
 // Trust first proxy (NGINX)
 app.set("trust proxy", 1);
 
+// Configure CORS with proper options
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://chainelect.org' // Production domain
+    : ['http://localhost:3000', 'http://localhost'], // Development frontend URLs
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'X-Requested-With', 
+    'sentry-trace', // Add the Sentry trace header
+    'baggage' // Sentry may also use this header
+  ],
+  credentials: true
+};
+
+// Apply CORS middleware with options
+app.use(cors(corsOptions));
+
 // Security headers middleware
 app.use((req, res, next) => {
   res.setHeader("X-Content-Type-Options", "nosniff");
@@ -41,7 +60,7 @@ app.use("/api/ocr", ocrRoutes);
 app.use("/api/ir", irRoutes);
 app.use("/api/registration", registrationRoutes);
 app.use("/api/vote", voteRoutes);
-app.use("/api/zkp", zkpVotingRoutes); 
+app.use("/api/zkp", zkpVotingRoutes);
 
 // Catch-all route for the React SPA
 app.get("*", (req, res) => {
