@@ -1,14 +1,53 @@
 const app = require("./app"); // Import the Express app
 const http = require("http");
+const pool = require('./src/config/db');
+const MigrationRunner = require('./src/migrations/migrationRunner');
 const {
   SUCCESS_MESSAGES,
 } = require("./src/utilities/messages/successMessages");
 
 const PORT = process.env.PORT || 5001;
 
-// Create an HTTP server and start listening
-const server = http.createServer(app);
+// Function to check database connection
+async function checkDatabaseConnection() {
+  try {
+    await pool.query('SELECT NOW()');
+    console.log('Database connection established');
+    return true;
+  } catch (error) {
+    console.error('Database connection failed:', error);
+    return false;
+  }
+}
 
-server.listen(PORT, () => {
-  console.log(SUCCESS_MESSAGES.COMMON.SERVER_RUNNING(PORT));
-});
+// Function to run migrations
+async function runMigrations() {
+  const migrationRunner = new MigrationRunner(pool);
+  await migrationRunner.runAllMigrations();
+}
+
+// Create an HTTP server and start listening
+async function startServer() {
+  try {
+    // Check database connection
+    const dbConnected = await checkDatabaseConnection();
+    if (!dbConnected) {
+      throw new Error('Could not establish database connection');
+    }
+    
+    // Run migrations
+    console.log('Running database migrations...');
+    await runMigrations();
+    
+    // Start the server
+    const server = http.createServer(app);
+    server.listen(PORT, () => {
+      console.log(SUCCESS_MESSAGES.COMMON.SERVER_RUNNING(PORT));
+    });
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+}
+
+startServer();
