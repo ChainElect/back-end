@@ -6,54 +6,32 @@ const { buildMimcSponge } = require("circomlibjs");
 
 /**
  * Register a verified user and create ZKP credentials
- * @param {string} frontPath - Path to front of ID card image
- * @param {string} backPath - Path to back of ID card image
- * @param {string} selfiePath - Path to selfie image
+ * @param {Object} userData - User data object containing fullName, idNumber, birthDate
  * @returns {Promise<Object>} ZKP credentials (nullifier, secret)
  */
-async function registerVerifiedUser(frontPath, backPath, selfiePath) {
+async function registerVerifiedUser(userData) {
   try {
-    // Step 1: Extract data from ID (OCR)
-    const mrzText = await ocrService.extractMRZ(backPath);
-    const idData = await ocrService.parseMRZ(mrzText);
-    
-    // Step 2: Extract faces from ID and selfie
-    const idFacePath = await irService.detectAndExtractFace(frontPath);
-    
-    // Step 3: Compare faces for verification
-    const selfieDescriptor = await irService.extractDescriptorFromSelfie(selfiePath);
-    const idDescriptor = await irService.extractDescriptorFromIDCard(idFacePath);
-    const facesMatch = await irService.compareDescriptors(selfieDescriptor, idDescriptor);
-    
-    if (!facesMatch) {
-      throw new Error("Face verification failed. The selfie does not match the ID photo.");
-    }
-    
-    // Step 4: Generate ZKP commitment
+    // Step 1: Generate ZKP commitment
     const commitment = await zkpService.generateCommitment();
     
-    // Step 5: Add commitment to Merkle tree
+    // Step 2: Add commitment to Merkle tree
     await zkpService.addCommitment(commitment.commitment);
     
-    // Step 6: Store user data in database
+    // Step 3: Store user data in database
     await userModel.saveUser({
-      name: `${idData.surname} ${idData.name}`,
-      dob: formatDate(idData.dob),
-      idNumber: idData.documentNumber,
+      name: userData.fullName,
+      dob: userData.birthDate,
+      idNumber: userData.idNumber,
       // Store commitment hash for reference (optional)
       commitmentHash: commitment.commitment
     });
     
-    // Step 7: Return credentials to user
+    // Step 4: Return credentials to user
     return {
       nullifier: commitment.nullifier,
       secret: commitment.secret,
-      // Include additional information for the frontend
-      userData: {
-        fullName: `${idData.surname} ${idData.name}`,
-        idNumber: idData.documentNumber,
-        dob: formatDate(idData.dob)
-      }
+      // Include the user data back
+      userData: userData
     };
   } catch (error) {
     console.error("[REGISTRATION_ERROR]:", error);

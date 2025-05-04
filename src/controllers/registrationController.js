@@ -10,38 +10,18 @@ const fs = require("fs");
  * @param {object} res - The response object
  */
 exports.completeRegistration = async (req, res) => {
-  const { frontPath, backPath, selfiePath } = req.body;
+  const { userData } = req.body;
   
-  if (!frontPath || !backPath || !selfiePath) {
+  if (!userData || !userData.fullName || !userData.idNumber || !userData.birthDate) {
     return res.status(400).json({
       success: false,
-      message: "Front image, back image, and selfie are required."
-    });
-  }
-  
-  // Validate that files exist
-  try {
-    if (!fs.existsSync(frontPath) || !fs.existsSync(backPath) || !fs.existsSync(selfiePath)) {
-      return res.status(400).json({
-        success: false,
-        message: "One or more of the provided files could not be found."
-      });
-    }
-  } catch (error) {
-    console.error("Error checking files:", error);
-    return res.status(500).json({
-      success: false,
-      message: "Error validating file paths."
+      message: "User data is required (fullName, idNumber, birthDate)."
     });
   }
   
   try {
-    // Process registration through identity-ZKP bridge
-    const result = await identityZkpBridgeService.registerVerifiedUser(
-      frontPath, 
-      backPath, 
-      selfiePath
-    );
+    // Process registration with the already extracted data
+    const result = await identityZkpBridgeService.registerVerifiedUser(userData);
     
     // Return ZKP credentials to user
     return res.status(200).json({
@@ -57,35 +37,11 @@ exports.completeRegistration = async (req, res) => {
     console.error("Registration error:", error);
     Sentry.captureException(error);
     
-    // Return appropriate error message
-    let errorMessage = ERROR_MESSAGES.COMMON.SERVER_ERROR;
-    if (error.message.includes("Face verification failed")) {
-      errorMessage = "Face verification failed. The selfie does not match the ID photo.";
-    } else if (error.message.includes("OCR")) {
-      errorMessage = "Could not read the ID card correctly. Please ensure the image is clear.";
-    }
-    
     return res.status(500).json({
       success: false,
-      message: errorMessage,
+      message: "Registration failed",
       error: error.message
     });
-  } finally {
-    // Clean up temporary files if necessary
-    try {
-      // Only remove files if they're in the temp/uploads directory to avoid deleting important files
-      if (frontPath.includes("uploads/")) {
-        fs.unlinkSync(frontPath);
-      }
-      if (backPath.includes("uploads/")) {
-        fs.unlinkSync(backPath);
-      }
-      if (selfiePath.includes("uploads/")) {
-        fs.unlinkSync(selfiePath);
-      }
-    } catch (cleanupError) {
-      console.error("Error cleaning up files:", cleanupError);
-    }
   }
 };
 

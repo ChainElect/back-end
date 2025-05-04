@@ -92,4 +92,35 @@ const extractMRZ = async (filePath) => {
   }
 };
 
-module.exports = { performOCR, extractMRZ };
+/**
+ * @summary Parses MRZ string and extracts user data.
+ * @param {string} mrz - MRZ text consisting of 3 lines.
+ * @returns {Object} Parsed user data: surname, name, dob, documentNumber
+ */
+const parseMRZ = (mrz) => {
+  const lines = mrz.split("\n");
+  if (lines.length !== 3) {
+    throw new Error("Invalid MRZ: Expected 3 lines");
+  }
+
+  const line1 = lines[0];
+  const line2 = lines[1];
+  const line3 = lines[2];
+
+  // Basic parsing logic (you may need to adapt this for your MRZ format)
+  const documentNumber = line1.substring(5, 14).replace(/</g, "");
+  const dob = line2.substring(0, 6);
+  const names = line3.split("<<");
+  const surname = names[0].replace(/</g, " ").trim();
+  const name = names[1]?.replace(/</g, " ").trim() || "";
+
+  return {
+    documentNumber,
+    dob,
+    surname,
+    name,
+  };
+};
+
+
+module.exports = { performOCR, extractMRZ, parseMRZ };
