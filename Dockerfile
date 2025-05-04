@@ -1,36 +1,31 @@
 # Base image
 FROM node:18-alpine
 
-# Set environment variables for canvas
-ENV PKG_CONFIG_PATH=/usr/lib/x86_64-linux-gnu/pkgconfig
-ENV LDFLAGS="-L/usr/lib/x86_64-linux-gnu"
-ENV CPPFLAGS="-I/usr/include"
-
 # Set working directory
 WORKDIR /app
 
-# Install necessary build tools for canvas and sharp
+# Install compiler toolchain, Python (with distutils), pkg-config, and native libs for canvas & sharp
 RUN apk add --no-cache \
+    build-base \
     python3 \
-    make \
-    g++ \
+    python3-dev \
+    py3-setuptools \
+    pkgconfig \
     cairo-dev \
     pango-dev \
-    jpeg-dev \
+    libjpeg-turbo-dev \
     giflib-dev \
-    librsvg-dev
+    libwebp-dev \
+    librsvg-dev \
+    vips-dev
 
-# Copy package.json and package-lock.json
+# Copy manifest and install dependencies
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy the rest of the application code
+# Copy source
 COPY . .
 
-# Expose the app's port
+# Expose port and start
 EXPOSE 5001
-
-# Start the backend server
 CMD ["node", "server.js"]

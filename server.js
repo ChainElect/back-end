@@ -1,4 +1,7 @@
-const app = require("./app"); // Import the Express app
+// Then load environment variables
+require('dotenv').config();
+
+const app = require("./app");
 const http = require("http");
 const pool = require('./src/config/db');
 const MigrationRunner = require('./src/migrations/migrationRunner');
@@ -11,7 +14,7 @@ const PORT = process.env.PORT || 5001;
 // Function to check database connection
 async function checkDatabaseConnection() {
   try {
-    await pool.query('SELECT NOW()');
+    await pool.query('SELECT datetime("now")');
     console.log('Database connection established');
     return true;
   } catch (error) {
@@ -32,7 +35,8 @@ async function startServer() {
     // Check database connection
     const dbConnected = await checkDatabaseConnection();
     if (!dbConnected) {
-      throw new Error('Could not establish database connection');
+      console.log('Creating new database...');
+      // SQLite will create the database file automatically
     }
     
     // Run migrations

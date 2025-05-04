@@ -15,6 +15,7 @@
     "@sentry/profiling-node": "^9.0.1",
     "@tensorflow/tfjs-node": "^4.22.0",
     "bcryptjs": "^2.4.3",
+    "better-sqlite3": "^11.9.1",
     "canvas": "^3.1.0",
     "circomlibjs": "^0.1.7",
     "cors": "^2.8.5",
@@ -27,6 +28,7 @@
     "pg": "^8.13.1",
     "sharp": "^0.33.5",
     "snarkjs": "^0.7.5",
+    "sqlite3": "^5.1.7",
     "tesseract.js": "^6.0.0"
   },
   "devDependencies": {
