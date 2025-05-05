@@ -1,62 +1,28 @@
-// src/config/db.js
-const path = require('path');
-const Database = require('better-sqlite3');
+const { Pool } = require('pg');
+const dotenv = require('dotenv');
 
-// Create database directory if it doesn't exist
-const dbDir = path.join(__dirname, '../../data');
-if (!require('fs').existsSync(dbDir)) {
-  require('fs').mkdirSync(dbDir, { recursive: true });
-}
+dotenv.config();
 
-// Create SQLite database
-const dbPath = path.join(dbDir, 'chainelect.db');
-const db = new Database(dbPath);
+// Configure PostgreSQL connection with explicit credentials
+const pool = new Pool({
+  user: process.env.DB_USER || 'postgres',      // Default to 'postgres' if not specified
+  password: process.env.DB_PASSWORD || 'postgres', // Default password
+  host: process.env.DB_HOST || 'localhost',
+  port: process.env.DB_PORT || 5432,
+  database: process.env.DB_NAME || 'chainelect',
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+});
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
+// Log connection attempt
+console.log(`Attempting to connect to PostgreSQL at ${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}`);
 
-// Create a PostgreSQL-compatible interface for SQLite
-const pool = {
-  query: async (text, params = []) => {
-    try {
-      // Convert PostgreSQL-style placeholders ($1, $2, etc.) to SQLite style (?, ?, etc.)
-      let sqliteQuery = text;
-      if (params.length > 0) {
-        sqliteQuery = text.replace(/\$(\d+)/g, '?');
-      }
-
-      // Handle different types of queries
-      if (sqliteQuery.trim().toUpperCase().startsWith('SELECT')) {
-        const stmt = db.prepare(sqliteQuery);
-        const rows = stmt.all(...params);
-        return { rows };
-      } else {
-        const stmt = db.prepare(sqliteQuery);
-        const result = stmt.run(...params);
-        
-        // For INSERT with RETURNING
-        if (sqliteQuery.includes('RETURNING')) {
-          const returningMatch = sqliteQuery.match(/RETURNING\s+(.+)$/i);
-          if (returningMatch) {
-            const columns = returningMatch[1].split(',').map(col => col.trim());
-            const selectQuery = `SELECT ${columns.join(', ')} FROM ${sqliteQuery.match(/INSERT INTO\s+(\w+)/i)[1]} WHERE rowid = ?`;
-            const selectStmt = db.prepare(selectQuery);
-            const rows = selectStmt.all(result.lastInsertRowid);
-            return { rows };
-          }
-        }
-        
-        return { 
-          rows: [], 
-          rowCount: result.changes,
-          lastID: result.lastInsertRowid 
-        };
-      }
-    } catch (error) {
-      console.error('Database query error:', error);
-      throw error;
-    }
+// Test database connection
+pool.query('SELECT NOW()', (err, res) => {
+  if (err) {
+    console.error('Database connection error:', err.stack);
+  } else {
+    console.log('Database connected successfully');
   }
-};
+});
 
 module.exports = pool;

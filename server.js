@@ -1,20 +1,19 @@
-// Then load environment variables
+// server.js
 require('dotenv').config();
 
 const app = require("./app");
 const http = require("http");
 const pool = require('./src/config/db');
-const MigrationRunner = require('./src/migrations/migrationRunner');
-const {
-  SUCCESS_MESSAGES,
-} = require("./src/utilities/messages/successMessages");
+const fs = require('fs');
+const path = require('path');
+const { SUCCESS_MESSAGES } = require("./src/utilities/messages/successMessages");
 
 const PORT = process.env.PORT || 5001;
 
 // Function to check database connection
 async function checkDatabaseConnection() {
   try {
-    await pool.query('SELECT datetime("now")');
+    await pool.query('SELECT NOW()');
     console.log('Database connection established');
     return true;
   } catch (error) {
@@ -25,8 +24,33 @@ async function checkDatabaseConnection() {
 
 // Function to run migrations
 async function runMigrations() {
-  const migrationRunner = new MigrationRunner(pool);
-  await migrationRunner.runAllMigrations();
+  try {
+    const migrationsDir = path.join(__dirname, 'src/migrations');
+    const sqlFile = path.join(migrationsDir, 'core_schema.sql');
+    
+    if (fs.existsSync(sqlFile)) {
+      console.log('Running database migrations...');
+      const sql = fs.readFileSync(sqlFile, 'utf-8');
+      const statements = sql
+        .split(';')
+        .map(stmt => stmt.trim())
+        .filter(stmt => stmt.length > 0);
+      
+      for (const statement of statements) {
+        try {
+          await pool.query(statement);
+        } catch (err) {
+          // Ignore "already exists" errors
+          if (!err.message.includes('already exists')) {
+            throw err;
+          }
+        }
+      }
+      console.log('Database migrations completed successfully');
+    }
+  } catch (error) {
+    console.error('Migration failed:', error);
+  }
 }
 
 // Create an HTTP server and start listening
@@ -35,12 +59,11 @@ async function startServer() {
     // Check database connection
     const dbConnected = await checkDatabaseConnection();
     if (!dbConnected) {
-      console.log('Creating new database...');
-      // SQLite will create the database file automatically
+      console.error('Could not connect to database. Please check your configuration.');
+      process.exit(1);
     }
     
     // Run migrations
-    console.log('Running database migrations...');
     await runMigrations();
     
     // Start the server

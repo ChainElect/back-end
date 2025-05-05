@@ -17,7 +17,7 @@ RUN apk add --no-cache \
     giflib-dev \
     libwebp-dev \
     librsvg-dev \
-    vips-dev
+    postgresql-client
 
 # Copy manifest and install dependencies
 COPY package*.json ./
