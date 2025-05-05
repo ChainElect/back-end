@@ -4,11 +4,6 @@ const zkpService = require("./zkpService");
 const userModel = require("../models/userModel");
 const { buildMimcSponge } = require("circomlibjs");
 
-/**
- * Register a verified user and create ZKP credentials
- * @param {Object} userData - User data object containing fullName, idNumber, birthDate
- * @returns {Promise<Object>} ZKP credentials (nullifier, secret)
- */
 async function registerVerifiedUser(userData) {
   try {
     // Step 1: Generate ZKP commitment
@@ -18,11 +13,14 @@ async function registerVerifiedUser(userData) {
     await zkpService.addCommitment(commitment.commitment);
     
     // Step 3: Store user data in database
+    // Note: Using a default password here - in a real app, you'd get this from the user
+    const defaultPassword = "tempPassword123"; 
+    
     await userModel.saveUser({
       name: userData.fullName,
       dob: userData.birthDate,
       idNumber: userData.idNumber,
-      // Store commitment hash for reference (optional)
+      password: defaultPassword,
       commitmentHash: commitment.commitment
     });
     
@@ -30,7 +28,6 @@ async function registerVerifiedUser(userData) {
     return {
       nullifier: commitment.nullifier,
       secret: commitment.secret,
-      // Include the user data back
       userData: userData
     };
   } catch (error) {
@@ -39,14 +36,6 @@ async function registerVerifiedUser(userData) {
   }
 }
 
-/**
- * Prepare voting data with ZKP
- * @param {string} nullifier - User's nullifier
- * @param {string} secret - User's secret
- * @param {string} electionId - ID of the election
- * @param {string} partyId - ID of the party being voted for
- * @returns {Promise<Object>} ZKP and voting data
- */
 async function prepareVoteData(nullifier, secret, electionId, partyId) {
   try {
     // Step 1: Recreate commitment from nullifier and secret
@@ -76,26 +65,6 @@ async function prepareVoteData(nullifier, secret, electionId, partyId) {
     console.error("[PREPARE_VOTE_ERROR]:", error);
     throw error;
   }
-}
-
-/**
- * Helper function to format date from MRZ format (YYMMDD) to ISO format (YYYY-MM-DD)
- * @param {string} mrzDate - Date in MRZ format
- * @returns {string} Formatted date
- */
-function formatDate(mrzDate) {
-  if (!mrzDate || mrzDate.length !== 6) {
-    return null;
-  }
-  
-  const year = mrzDate.substring(0, 2);
-  const month = mrzDate.substring(2, 4);
-  const day = mrzDate.substring(4, 6);
-  
-  // Determine century (19xx or 20xx)
-  const century = parseInt(year) >= 50 ? "19" : "20";
-  
-  return `${century}${year}-${month}-${day}`;
 }
 
 module.exports = {

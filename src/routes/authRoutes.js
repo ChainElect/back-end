@@ -13,8 +13,16 @@ dotenv.config();
 const router = express.Router();
 
 // Register Endpoint
+// Register Endpoint
 router.post("/register", async (req, res) => {
-  const { fullName, email, password, idNumber } = req.body;
+  const { fullName, password, idNumber, dob } = req.body;
+
+  // Check if required fields are present
+  if (!fullName || !password || !idNumber || !dob) {
+    return res.status(400).json({ 
+      error: "All fields are required: fullName, password, idNumber, and dob (date of birth)"
+    });
+  }
 
   try {
     // Hash the password
@@ -22,8 +30,8 @@ router.post("/register", async (req, res) => {
 
     // Insert user into the database
     const result = await pool.query(
-      "INSERT INTO users (full_name, email, password_hash, id_number) VALUES ($1, $2, $3, $4) RETURNING id",
-      [fullName, email, hashedPassword, idNumber]
+      "INSERT INTO users (full_name, password_hash, id_number, dob) VALUES ($1, $2, $3, $4) RETURNING id",
+      [fullName, hashedPassword, idNumber, dob]
     );
 
     res.status(201).json({
@@ -32,6 +40,12 @@ router.post("/register", async (req, res) => {
     });
   } catch (error) {
     console.error(error);
+    
+    // Provide more specific error messages
+    if (error.code === '23505') {
+      return res.status(400).json({ error: "User with this ID number already exists" });
+    }
+    
     res.status(500).json({ error: ERROR_MESSAGES.DATABASE_ERROR });
   }
 });
