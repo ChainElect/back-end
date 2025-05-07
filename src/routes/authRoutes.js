@@ -55,8 +55,8 @@ router.post('/register', async (req, res) => {
 });
 
 router.post('/login', async (req, res) => {
-  const { id_number, password } = req.body;
-
+  const { idNumber, password } = req.body;
+  console.log("Login data:", req.body);
   try {
     // Need to retrieve all users since id_number is hashed
     const allUsersQuery = 'SELECT * FROM users';
@@ -65,9 +65,10 @@ router.post('/login', async (req, res) => {
     // Find user by comparing provided id_number with stored hashes
     let user = null;
     for (const currentUser of allUsers.rows) {
-      const idMatches = await bcrypt.compare(id_number, currentUser.id_number);
+      const idMatches = await bcrypt.compare(idNumber, currentUser.commitment);
       if (idMatches) {
         user = currentUser;
+        console.log("User found:", user);
         break;
       }
     }
@@ -89,13 +90,13 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    // Authentication successful
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      userId: user.id,
-      isAdmin: user.is_admin
-    });
+    const token = jwt.sign(
+      { userId: user.id, isAdmin: user.is_admin },
+      process.env.JWT_SECRET,
+      { algorithm: process.env.HASHING_ALGORITHM || "HS256", expiresIn: "1h" }
+    );
+
+    res.json({ token, message: SUCCESS_MESSAGES.LOGIN_SUCCESS });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({
