@@ -137,9 +137,9 @@ exports.validateIDDocument = async (req, res) => {
  * Store validated data in the database.
  */
 exports.storeValidatedData = async (req, res) => {
-  const { name, dob, idNumber } = req.body;
-
-  if (!name || !dob || !idNumber) {
+  const { id_number, password, commitment_hash, is_admin } = req.body;
+  con
+  if (!id_number || !password || !commitment_hash) {
     return res.status(400).json({
       success: false,
       message: ERROR_MESSAGES.OCR.VALIDATED_DATA_REQUIRED,
@@ -147,7 +147,13 @@ exports.storeValidatedData = async (req, res) => {
   }
 
   try {
-    const user = await userModel.saveUser({ name, dob, idNumber });
+    const user = await userModel.saveUser({ 
+      id_number,
+      password,
+      commitment_hash,
+      is_admin,
+    });
+    console.log("User saved:", user);
     return res.json({ success: true, user });
   } catch (error) {
     Sentry.captureException(error);

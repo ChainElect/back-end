@@ -6,22 +6,18 @@ const { buildMimcSponge } = require("circomlibjs");
 
 async function registerVerifiedUser(userData) {
   try {
+    console.log("registerVerifiedUser", userData);
     // Step 1: Generate ZKP commitment
     const commitment = await zkpService.generateCommitment();
-    
+    const mimcSponge = await buildMimcSponge();
     // Step 2: Add commitment to Merkle tree
     await zkpService.addCommitment(commitment.commitment);
-    
+
     // Step 3: Store user data in database
-    // Note: Using a default password here - in a real app, you'd get this from the user
-    const defaultPassword = "tempPassword123"; 
-    
     await userModel.saveUser({
-      name: userData.fullName,
-      dob: userData.birthDate,
-      idNumber: userData.idNumber,
-      password: defaultPassword,
-      commitmentHash: commitment.commitment
+      commitment: userData.commitment_hash,
+      password: userData.password,
+      is_admin: userData.is_admin || false
     });
     
     // Step 4: Return credentials to user
@@ -41,16 +37,16 @@ async function prepareVoteData(nullifier, secret, electionId, partyId) {
     // Step 1: Recreate commitment from nullifier and secret
     const commitmentData = await zkpService.recreateCommitment(nullifier, secret);
     const commitment = commitmentData.commitment;
-    
+
     // Step 2: Verify commitment is in tree
     const isRegistered = await zkpService.isCommitmentInTree(commitment);
     if (!isRegistered) {
       throw new Error("Voter is not registered. Commitment not found in Merkle tree.");
     }
-    
+
     // Step 3: Generate ZK proof
     const zkProof = await zkpService.generateVotingProof(nullifier, secret, commitment);
-    
+
     // Step 4: Return voting data
     return {
       electionId,

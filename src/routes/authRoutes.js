@@ -12,89 +12,97 @@ dotenv.config();
 
 const router = express.Router();
 
-// Register Endpoint
-// Register Endpoint
-router.post("/register", async (req, res) => {
-  const { fullName, password, idNumber, dob } = req.body;
+const SALT_ROUNDS = 10;
 
-  // Check if required fields are present
-  if (!fullName || !password || !idNumber || !dob) {
-    return res.status(400).json({ 
-      error: "All fields are required: fullName, password, idNumber, and dob (date of birth)"
-    });
-  }
-
+// Route for user registration
+router.post('/register', async (req, res) => {
+  const { commitment_hash, password, is_admin } = req.body;
+  console.log(req.body);
+  console.log("Registering user :", commitment_hash, password, is_admin);
   try {
-    // Hash the password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Hash both id_number and password
+    const hashedCommitent = await bcrypt.hash(commitment_hash, SALT_ROUNDS);
+    const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Insert user into the database
-    const result = await pool.query(
-      "INSERT INTO users (full_name, password_hash, id_number, dob) VALUES ($1, $2, $3, $4) RETURNING id",
-      [fullName, hashedPassword, idNumber, dob]
-    );
+    // Insert new user into database
+    const query = `
+      INSERT INTO users (commitment, password_hash, is_admin)
+      VALUES ($1, $2, $3)
+      RETURNING id`;
+    
+    const values = [hashedCommitent, hashedPassword, is_admin || false];
+    const result = await pool.query(query, values);
 
     res.status(201).json({
-      message: SUCCESS_MESSAGES.AUTH.USER_REGISTERED,
-      userId: result.rows[0].id,
+      success: true,
+      message: 'User registered successfully',
+      userId: result.rows[0].id
     });
   } catch (error) {
-    console.error(error);
-    
-    // Provide more specific error messages
-    if (error.code === '23505') {
-      return res.status(400).json({ error: "User with this ID number already exists" });
+    if (error.code === '23505') { // PostgreSQL unique constraint violation
+      return res.status(409).json({
+        success: false,
+        message: 'User with this ID number already exists'
+      });
     }
     
-    res.status(500).json({ error: ERROR_MESSAGES.DATABASE_ERROR });
+    console.error('Registration error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error registering user'
+    });
   }
 });
 
-// Login Endpoint
-router.post("/login", async (req, res) => {
-  const { idNumber, password } = req.body;
+router.post('/login', async (req, res) => {
+  const { id_number, password } = req.body;
 
   try {
-    // Find user by ID number
-    const userResult = await pool.query(
-      "SELECT * FROM users WHERE id_number = $1",
-      [idNumber]
-    );
-
-    if (userResult.rows.length === 0) {
-      return res.status(400).json({ error: ERROR_MESSAGES.USER_NOT_FOUND });
+    // Need to retrieve all users since id_number is hashed
+    const allUsersQuery = 'SELECT * FROM users';
+    const allUsers = await pool.query(allUsersQuery);
+    
+    // Find user by comparing provided id_number with stored hashes
+    let user = null;
+    for (const currentUser of allUsers.rows) {
+      const idMatches = await bcrypt.compare(id_number, currentUser.id_number);
+      if (idMatches) {
+        user = currentUser;
+        break;
+      }
     }
 
-    const user = userResult.rows[0];
-
-    // Compare provided password with the stored hashed password
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res
-        .status(400)
-        .json({ error: ERROR_MESSAGES.INVALID_CREDENTIALS });
+    // If no user found with matching id_number
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
     }
 
-    // Generate a JWT token with isAdmin information
-    const token = jwt.sign(
-      { userId: user.id, isAdmin: user.is_admin },
-      process.env.JWT_SECRET,
-      { algorithm: process.env.HASHING_ALGORITHM || "HS256", expiresIn: "1h" }
-    );
+    // Verify password
+    const passwordValid = await bcrypt.compare(password, user.password_hash);
+    if (!passwordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
 
-    res.json({ token, message: SUCCESS_MESSAGES.LOGIN_SUCCESS });
+    // Authentication successful
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      userId: user.id,
+      isAdmin: user.is_admin
+    });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: ERROR_MESSAGES.SERVER_ERROR });
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error during login'
+    });
   }
-});
-
-// Protected Route
-router.get("/protected", authMiddleware, (req, res) => {
-  res.status(200).json({
-    message: SUCCESS_MESSAGES.PROTECTED_ROUTE_ACCESS,
-    userId: req.user.userId,
-  });
 });
 
 module.exports = router;

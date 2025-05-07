@@ -1,13 +1,9 @@
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    full_name VARCHAR(255) NOT NULL,
-    dob DATE NOT NULL,
-    id_number VARCHAR(50) NOT NULL UNIQUE,
+    commitment VARCHAR(255) NOT NULL UNIQUE,
     password_hash VARCHAR(255) NOT NULL,
-    commitment_hash TEXT
+    is_admin BOOLEAN DEFAULT FALSE
 );
-
-CREATE INDEX IF NOT EXISTS users_id_number_idx ON users (id_number);
 
 CREATE TABLE IF NOT EXISTS merkle_tree_roots (
     id SERIAL PRIMARY KEY,

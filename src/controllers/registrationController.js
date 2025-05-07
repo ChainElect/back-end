@@ -11,11 +11,11 @@ const fs = require("fs");
  */
 exports.completeRegistration = async (req, res) => {
   const { userData } = req.body;
-
-  if (!userData || !userData.fullName || !userData.idNumber || !userData.birthDate) {
+  console.log("Complete registration:", userData);
+  if (!userData) {
     return res.status(400).json({
       success: false,
-      message: "User data is required (fullName, idNumber, birthDate)."
+      message: "User data is required (commitment, password_hash, is_admin)."
     });
   }
 
