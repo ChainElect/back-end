@@ -29,6 +29,12 @@ router.post("/check-credentials", authMiddleware, registrationController.checkCr
 router.post("/prepare-vote", voterController.prepareVote);
 
 /**
+ * @route POST /api/zkp/submit-vote
+ * @description Submit vote with ZKP
+ * @access Private
+ */
+router.post("/cast-vote", voterController.castVote);
+/**
  * @route POST /api/zkp/generate-commitment
  * @description Generate a new commitment for testing
  * @access Private

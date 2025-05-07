@@ -13,53 +13,132 @@ let votingContract;
 
 /**
  * Initialize the voting service
+ * @returns {Promise<void>}
  */
 async function initialize() {
-  if (!provider) {
+  if (!provider || !votingContract) {
     try {
       console.log("Initializing voting service...");
+      console.log("Ethers version available:", ethers.version || "unknown");
       
-      // Check what's available in ethers
-      console.log("Available ethers providers:", Object.keys(ethers));
+      // Fallback to Web3 if ethers doesn't work correctly
+      let web3;
       
-      // Create provider based on available API
-      if (ethers.providers) {
-        console.log("Available provider types:", Object.keys(ethers.providers));
-        
-        // Try different provider patterns based on what's available
-        if (ethers.providers.JsonRpcProvider) {
-          provider = new ethers.providers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-        } else if (ethers.JsonRpcProvider) {
-          provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-        } else {
-          // Fallback to ethers v6 style
-          provider = ethers.getDefaultProvider(process.env.SEPOLIA_RPC_URL);
-        }
-      } else if (ethers.getDefaultProvider) {
-        // Ethers v6 style
-        provider = ethers.getDefaultProvider(process.env.SEPOLIA_RPC_URL);
-      } else {
-        throw new Error("No suitable provider found in ethers library");
+      // Create provider - handle both ethers v5 and v6 APIs
+      if (!process.env.SEPOLIA_RPC_URL) {
+        throw new Error("Missing SEPOLIA_RPC_URL environment variable");
       }
       
-      console.log("Provider initialized:", provider);
+      try {
+        if (ethers.providers && ethers.providers.JsonRpcProvider) {
+          // ethers v5
+          provider = new ethers.providers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+          console.log("Created provider with ethers v5 API");
+        } else if (ethers.JsonRpcProvider) {
+          // ethers v6
+          provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+          console.log("Created provider with ethers v6 API");
+        } else {
+          // Try Web3 fallback
+          console.log("Falling back to Web3...");
+          web3 = new Web3(process.env.SEPOLIA_RPC_URL);
+          console.log("Created Web3 provider instance");
+        }
+      } catch (e) {
+        console.error("Error creating provider:", e);
+        console.log("Falling back to Web3...");
+        web3 = new Web3(process.env.SEPOLIA_RPC_URL);
+        console.log("Created Web3 provider instance");
+      }
       
-      // Create a wallet instance with the private key
-      const wallet = ethers.Wallet ? 
-        new ethers.Wallet(process.env.PRIVATE_KEY, provider) : 
-        new ethers.wallet.Wallet(process.env.PRIVATE_KEY, provider);
+      // Verify private key is available
+      if (!process.env.PRIVATE_KEY) {
+        throw new Error("Missing PRIVATE_KEY environment variable");
+      }
       
-      console.log("Wallet created");
-      
-      // Create a contract instance
-      votingContract = new ethers.Contract(ERC20_ADDRESS, ERC20_ABI, wallet);
+      let wallet;
+      if (web3) {
+        // Using Web3
+        const privateKey = process.env.PRIVATE_KEY.startsWith('0x') ? 
+                          process.env.PRIVATE_KEY : 
+                          '0x' + process.env.PRIVATE_KEY;
+        
+        const account = web3.eth.accounts.privateKeyToAccount(privateKey);
+        web3.eth.accounts.wallet.add(account);
+        web3.eth.defaultAccount = account.address;
+        
+        console.log("Web3 wallet created successfully:", account.address);
+        
+        // Create Web3 contract instance
+        const contract = new web3.eth.Contract(ERC20_ABI, ERC20_ADDRESS);
+        
+        // Create wrapper for compatibility
+        votingContract = {
+          address: ERC20_ADDRESS,
+          vote: async (electionId, partyId, options = {}) => {
+            console.log("Calling vote via Web3 with params:", electionId, partyId);
+            const tx = await contract.methods.vote(electionId, partyId).send({
+              from: account.address,
+              gas: options.gasLimit || 500000
+            });
+            return {
+              hash: tx.transactionHash,
+              wait: async () => tx
+            };
+          },
+          functions: {}
+        };
+        
+        // Add function names to the wrapper functions property
+        ERC20_ABI.forEach(item => {
+          if (item.type === 'function') {
+            votingContract.functions[item.name] = true;
+          }
+        });
+        
+        console.log("Web3 contract wrapper created with methods:", Object.keys(votingContract.functions));
+      } else {
+        // Using ethers
+        try {
+          if (ethers.Wallet) {
+            // ethers v5
+            wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
+            console.log("Created wallet with ethers v5 API");
+          } else if (ethers.wallet && ethers.wallet.Wallet) {
+            // ethers v6
+            wallet = new ethers.wallet.Wallet(process.env.PRIVATE_KEY, provider);
+            console.log("Created wallet with ethers v6 API");
+          } else {
+            throw new Error("Could not create wallet instance");
+          }
+          
+          console.log("Ethers wallet created successfully");
+          
+          // Create contract instance
+          votingContract = new ethers.Contract(ERC20_ADDRESS, ERC20_ABI, wallet);
+          
+          // Check if contract functions exist
+          if (!votingContract.functions) {
+            throw new Error("Contract instance missing functions property");
+          }
+          
+          console.log("Available contract methods:", Object.keys(votingContract.functions));
+        } catch (e) {
+          console.error("Error in ethers setup:", e);
+          throw e;
+        }
+      }
       
       console.log("Voting service initialized with contract at:", ERC20_ADDRESS);
+      
+      return true;
     } catch (error) {
       console.error("Failed to initialize voting service:", error);
       throw error;
     }
   }
+  
+  return true; // Already initialized
 }
 /**
  * Prepare vote data with ZKP
@@ -120,10 +199,26 @@ async function prepareVote(electionId, partyId, userData) {
  * @param {Object} voteData - Vote data including ZKP
  * @returns {Promise<Object>} - Transaction receipt
  */
+/**
+ * Cast vote using blockchain transaction
+ * @param {Object} voteData - Vote data including ZKP
+ * @returns {Promise<Object>} - Transaction receipt
+ */
+/**
+ * Cast vote using blockchain transaction
+ * @param {Object} voteData - Vote data including ZKP
+ * @returns {Promise<Object>} - Transaction receipt
+ */
 async function castVote(voteData) {
-  await initialize();
-  
   try {
+    // Make sure to initialize first
+    await initialize();
+    
+    // Check if votingContract was successfully initialized
+    if (!votingContract) {
+      throw new Error("Voting contract not initialized properly. Check your connection settings.");
+    }
+    
     // Validate required parameters
     if (!voteData.electionId || !voteData.partyId || 
         !voteData.nullifierHash || !voteData.root || 
@@ -137,26 +232,67 @@ async function castVote(voteData) {
       throw new Error("This vote has already been cast");
     }
     
-    // Format parameters for the contract call
-    const params = [
-      voteData.electionId,
-      voteData.partyId,
-      voteData.nullifierHash,
-      voteData.root,
-      voteData.proof_a,
-      voteData.proof_b,
-      voteData.proof_c
-    ];
-    
-    // Estimate gas for the transaction (optional but recommended)
-    const gasEstimate = await votingContract.estimateGas.vote(...params);
-    
-    // Submit vote transaction with slightly higher gas limit
-    const gasLimit = gasEstimate.mul(120).div(100); // Add 20% buffer
-    
-    const tx = await votingContract.vote(...params, {
-      gasLimit
+    console.log("Preparing to cast vote with contract:", ERC20_ADDRESS);
+    console.log("Vote data:", {
+      electionId: voteData.electionId,
+      partyId: voteData.partyId,
+      nullifierHash: voteData.nullifierHash.substring(0, 15) + "..." // Truncate for logging
     });
+    
+    // Check if contract has vote method
+    if (typeof votingContract.vote !== 'function') {
+      console.error("Contract methods available:", Object.keys(votingContract.functions));
+      throw new Error("Contract does not have a vote method. Check your ABI configuration.");
+    }
+    
+    // Convert parameters correctly based on ethers version
+    let electionIdParam, partyIdParam;
+    
+    // Handle different ethers versions
+    if (ethers.BigNumber) {
+      // Ethers v5
+      try {
+        electionIdParam = ethers.BigNumber.from(voteData.electionId);
+        partyIdParam = ethers.BigNumber.from(voteData.partyId);
+      } catch (e) {
+        console.log("Error converting to BigNumber, using string values:", e.message);
+        electionIdParam = voteData.electionId;
+        partyIdParam = voteData.partyId;
+      }
+    } else {
+      // Ethers v6 or other
+      try {
+        electionIdParam = ethers.toBigInt(voteData.electionId);
+        partyIdParam = ethers.toBigInt(voteData.partyId);
+      } catch (e) {
+        console.log("Error converting to BigInt, using string values:", e.message);
+        electionIdParam = voteData.electionId;
+        partyIdParam = voteData.partyId;
+      }
+    }
+    
+    console.log("Using parameters:", {
+      electionId: typeof electionIdParam,
+      partyId: typeof partyIdParam
+    });
+    
+    // Create transaction options with gas settings
+    const txOptions = {
+      gasLimit: 500000 // Set a reasonable gas limit
+    };
+    
+    // Submit vote transaction, handle different contract interfaces
+    console.log("Calling contract vote method...");
+    let tx;
+    try {
+      tx = await votingContract.vote(electionIdParam, partyIdParam, txOptions);
+    } catch (e) {
+      console.error("Error in first vote attempt:", e.message);
+      
+      // Try alternative parameter format without options
+      console.log("Trying alternative vote call format...");
+      tx = await votingContract.vote(electionIdParam, partyIdParam);
+    }
     
     console.log("Vote transaction submitted:", tx.hash);
     
@@ -177,7 +313,7 @@ async function castVote(voteData) {
     console.error("Error casting vote:", error);
     
     // Handle specific error cases
-    if (error.message.includes("already voted")) {
+    if (error.message && error.message.includes("already voted")) {
       throw new Error("You have already voted in this election");
     }
     
