@@ -8,8 +8,8 @@ const merkleTreeModel = require("../models/merkleTreeModel");
 
 // Constants
 const TREE_LEVELS = 20;
-const ZKEY_PATH = path.join(__dirname, "../../circuits/build/Verifier.zkey");
-const WASM_PATH = path.join(__dirname, "../../circuits/build/Verifier_js/Verifier.wasm");
+const ZKEY_PATH = path.join(__dirname, "../utils/Verifier.js");
+const WASM_PATH = path.join(__dirname, "../utils/Verifier.zkey");
 
 let mimc = null;
 

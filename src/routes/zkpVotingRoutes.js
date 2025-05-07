@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const registrationController = require("../controllers/registrationController");
+const voterController = require("../controllers/voteController");
 const authMiddleware = require("../middlewares/authMiddleware");
 const zkpService = require("../services/zkpService");
 const { ERROR_MESSAGES } = require("../utilities/messages/errorMessages");
@@ -19,6 +20,13 @@ router.post("/register", registrationController.completeRegistration);
  * @access Private
  */
 router.post("/check-credentials", authMiddleware, registrationController.checkCredentials);
+
+/**
+ * @route POST /api/zkp/prepare-voter
+ * @description Prepare voter data with ZKP
+ * @access Private
+ */
+router.post("/prepare-vote", voterController.prepareVote);
 
 /**
  * @route POST /api/zkp/generate-commitment

@@ -1,8 +1,9 @@
 const { ethers } = require('ethers');
-const zkpService = require('./zkpService');
+const Web3 = require('web3');
 const merkleTreeModel = require('../models/merkleTreeModel');
 const { ERROR_MESSAGES } = require('../utilities/messages/errorMessages');
-
+const zkpService = require('./zkpService');
+const { getDefaultProvider } = require('ethers');
 // Load contract ABI and address from constants
 const { ERC20_ABI, ERC20_ADDRESS } = require('../utils/wallet/walletConstants.cjs');
 
@@ -15,19 +16,51 @@ let votingContract;
  */
 async function initialize() {
   if (!provider) {
-    // Use the RPC URL from environment variables
-    provider = new ethers.providers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-    
-    // Create a wallet instance with the private key
-    const wallet = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
-    
-    // Create a contract instance
-    votingContract = new ethers.Contract(ERC20_ADDRESS, ERC20_ABI, wallet);
-    
-    console.log("Voting service initialized with contract at:", ERC20_ADDRESS);
+    try {
+      console.log("Initializing voting service...");
+      
+      // Check what's available in ethers
+      console.log("Available ethers providers:", Object.keys(ethers));
+      
+      // Create provider based on available API
+      if (ethers.providers) {
+        console.log("Available provider types:", Object.keys(ethers.providers));
+        
+        // Try different provider patterns based on what's available
+        if (ethers.providers.JsonRpcProvider) {
+          provider = new ethers.providers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+        } else if (ethers.JsonRpcProvider) {
+          provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+        } else {
+          // Fallback to ethers v6 style
+          provider = ethers.getDefaultProvider(process.env.SEPOLIA_RPC_URL);
+        }
+      } else if (ethers.getDefaultProvider) {
+        // Ethers v6 style
+        provider = ethers.getDefaultProvider(process.env.SEPOLIA_RPC_URL);
+      } else {
+        throw new Error("No suitable provider found in ethers library");
+      }
+      
+      console.log("Provider initialized:", provider);
+      
+      // Create a wallet instance with the private key
+      const wallet = ethers.Wallet ? 
+        new ethers.Wallet(process.env.PRIVATE_KEY, provider) : 
+        new ethers.wallet.Wallet(process.env.PRIVATE_KEY, provider);
+      
+      console.log("Wallet created");
+      
+      // Create a contract instance
+      votingContract = new ethers.Contract(ERC20_ADDRESS, ERC20_ABI, wallet);
+      
+      console.log("Voting service initialized with contract at:", ERC20_ADDRESS);
+    } catch (error) {
+      console.error("Failed to initialize voting service:", error);
+      throw error;
+    }
   }
 }
-
 /**
  * Prepare vote data with ZKP
  * @param {string} electionId - ID of the election
@@ -171,11 +204,21 @@ async function getElectionDetails(electionId) {
   
   try {
     const details = await votingContract.getElectionDetails(electionId);
+    
+    // Convert BigNumber or similar to regular numbers safely
+    const startTimeNum = typeof details.startTime.toNumber === 'function' ? 
+      details.startTime.toNumber() : 
+      Number(details.startTime);
+      
+    const endTimeNum = typeof details.endTime.toNumber === 'function' ? 
+      details.endTime.toNumber() : 
+      Number(details.endTime);
+    
     return {
       id: details.id.toString(),
       name: details.name,
-      startTime: new Date(details.startTime.toNumber() * 1000),
-      endTime: new Date(details.endTime.toNumber() * 1000),
+      startTime: new Date(startTimeNum * 1000),
+      endTime: new Date(endTimeNum * 1000),
       parties: details.parties.map(party => ({
         id: party.id.toString(),
         name: party.name,

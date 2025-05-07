@@ -13,7 +13,7 @@ if (!process.env.API_URL) {
   throw new Error("API_URL environment variable is not defined.");
 }
 
-const provider = new ethers.JsonRpcProvider(process.env.API_URL);
+const provider = new ethers.providers.Web3Provider(process.env.API_URL);
 
 // Validate that the wallet private key is provided
 if (!process.env.WALLET_PRIVATE_KEY) {
