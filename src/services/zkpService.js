@@ -1,3 +1,4 @@
+// Fix for src/services/zkpService.js to handle ethers.js v6
 const { ethers } = require("ethers");
 const { buildMimcSponge } = require("circomlibjs");
 const crypto = require("crypto");
@@ -201,11 +202,19 @@ async function generateVotingProof(nullifier, secret, commitment) {
     // Convert proof for Solidity
     const calldata = await snarkjs.groth16.exportSolidityCallData(proof, publicSignals);
     
-    // Parse calldata
+    // Parse calldata - Modified to work with both ethers v5 and v6
     const argv = calldata
       .replace(/["[\]\s]/g, "")
       .split(",")
-      .map((x) => ethers.BigNumber.from(x).toString());
+      .map((x) => {
+        // Check if we have ethers.BigNumber (v5) or need to use bigint (v6)
+        if (typeof ethers.BigNumber === 'function') {
+          return ethers.BigNumber.from(x).toString();
+        } else {
+          // Handle ethers v6 - direct conversion to string
+          return BigInt(x).toString();
+        }
+      });
     
     const a = [argv[0], argv[1]];
     const b = [
