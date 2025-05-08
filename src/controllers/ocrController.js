@@ -19,7 +19,6 @@ const { SUCCESS_MESSAGES } = require("../utilities/messages/successMessages");
  * Currently, we only return the file path since no OCR is performed on the front image.
  */
 exports.uploadAndProcessIDFront = async (req, res) => {
-  console.log("uploadAndProcessIDFront called", req.file);
   const frontPath = req.file?.path;
   if (!frontPath) {
     return res.status(400).json({
@@ -153,7 +152,6 @@ exports.storeValidatedData = async (req, res) => {
       commitment_hash,
       is_admin,
     });
-    console.log("User saved:", user);
     return res.json({ success: true, user });
   } catch (error) {
     Sentry.captureException(error);

@@ -15,7 +15,6 @@ const { ERROR_MESSAGES } = require("../../utilities/messages/errorMessages");
 const extractDescriptor = async (imagePath, minConfidence) => {
   try {
     const imgCanvas = await loadImage(imagePath);
-    console.log(`Image loaded successfully: ${imagePath}`);
 
     const detection = await faceapi
       .detectSingleFace(

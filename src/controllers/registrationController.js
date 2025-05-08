@@ -11,7 +11,6 @@ const fs = require("fs");
  */
 exports.completeRegistration = async (req, res) => {
   const { userData } = req.body;
-  console.log("Complete registration:", userData);
   if (!userData) {
     return res.status(400).json({
       success: false,

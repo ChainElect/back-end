@@ -14,7 +14,6 @@ const PORT = process.env.PORT || 5001;
 async function checkDatabaseConnection() {
   try {
     await pool.query('SELECT NOW()');
-    console.log('Database connection established');
     return true;
   } catch (error) {
     console.error('Database connection failed:', error);
@@ -29,7 +28,6 @@ async function runMigrations() {
     const sqlFile = path.join(migrationsDir, 'core_schema.sql');
     
     if (fs.existsSync(sqlFile)) {
-      console.log('Running database migrations...');
       const sql = fs.readFileSync(sqlFile, 'utf-8');
       const statements = sql
         .split(';')
@@ -46,7 +44,6 @@ async function runMigrations() {
           }
         }
       }
-      console.log('Database migrations completed successfully');
     }
   } catch (error) {
     console.error('Migration failed:', error);

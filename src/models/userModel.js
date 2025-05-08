@@ -4,10 +4,7 @@ const bcrypt = require("bcrypt");
 const SALT_ROUNDS = 10;
 
 exports.saveUser = async ({ commitment, password, is_admin }) => {
-  // Validate inputs to prevent bcrypt errors
-  console.log("Commitment hash:", commitment);
-  console.log("Is admin:", is_admin);
-  console.log("Password :", password);;
+
   if (!commitment || !password) {
     throw new Error("ID number and password are required");
   }

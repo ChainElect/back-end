@@ -6,7 +6,6 @@ const { buildMimcSponge } = require("circomlibjs");
 
 async function registerVerifiedUser(userData) {
   try {
-    console.log("registerVerifiedUser", userData);
     // Step 1: Generate ZKP commitment
     const commitment = await zkpService.generateCommitment();
     

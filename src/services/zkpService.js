@@ -18,7 +18,6 @@ let mimc = null;
 async function initialize() {
   if (!mimc) {
     mimc = await buildMimcSponge();
-    console.log("MiMC initialized for ZKP operations");
   }
 }
 
@@ -39,7 +38,6 @@ async function generateCommitment() {
   // Immediately check if this nullifier hash already exists
   const nullifierExists = await merkleTreeModel.nullifierExists(nullifierHash);
   if (nullifierExists) {
-    console.log("Generated nullifier already exists, generating a new one...");
     return generateCommitment(); // Recursively try again
   }
   

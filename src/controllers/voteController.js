@@ -86,9 +86,6 @@ exports.castVote = async (req, res) => {
   }
 
   try {
-    // Enhanced nullifier check with logging
-    console.log(`Vote request received with nullifier: ${nullifierHash.substring(0, 15)}...`);
-
     // Check if user has already voted with this nullifier
     const hasVoted = await votingService.hasVoted(nullifierHash);
 

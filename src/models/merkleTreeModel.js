@@ -142,16 +142,13 @@ exports.nullifierExists = async (nullifierHash) => {
   try {
     // Standardize nullifierHash as string
     const nullifierHashStr = nullifierHash.toString();
-    
-    console.log(`Checking if nullifier exists: ${nullifierHashStr.substring(0, 10)}...`);
-    
+        
     const result = await pool.query(
       "SELECT 1 FROM merkle_tree_commitments WHERE nullifier_hash = $1",
       [nullifierHashStr]
     );
     
     const exists = result.rows.length > 0;
-    console.log(`Nullifier ${nullifierHashStr.substring(0, 10)}... exists: ${exists}`);
     
     if (exists) {
       // Check if already used
@@ -161,7 +158,6 @@ exports.nullifierExists = async (nullifierHash) => {
       );
       
       const isUsed = usedResult.rows[0] && usedResult.rows[0].used;
-      console.log(`Nullifier ${nullifierHashStr.substring(0, 10)}... used: ${isUsed}`);
       
       return isUsed;
     }
@@ -178,20 +174,16 @@ exports.markNullifierUsed = async (nullifierHash) => {
   try {
     // Standardize nullifierHash as string
     const nullifierHashStr = nullifierHash.toString();
-    
-    console.log(`Marking nullifier as used: ${nullifierHashStr.substring(0, 10)}...`);
-    
+        
     const result = await pool.query(
       "UPDATE merkle_tree_commitments SET used = TRUE WHERE nullifier_hash = $1 RETURNING *",
       [nullifierHashStr]
     );
     
     if (result.rowCount === 0) {
-      console.error(`No commitment found with nullifier: ${nullifierHashStr.substring(0, 10)}...`);
       throw new Error("Nullifier not found in database");
     }
     
-    console.log(`Successfully marked nullifier as used: ${nullifierHashStr.substring(0, 10)}...`);
     return true;
   } catch (error) {
     console.error("Error marking nullifier as used:", error);
@@ -203,9 +195,7 @@ exports.markNullifierUsed = async (nullifierHash) => {
   try {
     // Standardize nullifierHash as string
     const nullifierHashStr = nullifierHash.toString();
-    
-    console.log(`Marking nullifier as used: ${nullifierHashStr.substring(0, 10)}...`);
-    
+        
     const result = await pool.query(
       "UPDATE merkle_tree_commitments SET used = TRUE WHERE nullifier_hash = $1 RETURNING *",
       [nullifierHashStr]
@@ -216,7 +206,6 @@ exports.markNullifierUsed = async (nullifierHash) => {
       throw new Error("Nullifier not found in database");
     }
     
-    console.log(`Successfully marked nullifier as used: ${nullifierHashStr.substring(0, 10)}...`);
     return true;
   } catch (error) {
     console.error("Error marking nullifier as used:", error);

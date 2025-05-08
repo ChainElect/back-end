@@ -18,8 +18,6 @@ let votingContract;
 async function initialize() {
   if (!provider || !votingContract) {
     try {
-      console.log("Initializing voting service...");
-      console.log("Ethers version available:", ethers.version || "unknown");
       
       // Check environment variables
       if (!process.env.SEPOLIA_RPC_URL) {
@@ -33,7 +31,6 @@ async function initialize() {
       // Create provider - handle ethers v6
       try {
         provider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-        console.log("Created provider with ethers v6 API");
       } catch (e) {
         console.error("Error creating provider:", e);
         throw new Error("Failed to initialize provider: " + e.message);
@@ -46,7 +43,6 @@ async function initialize() {
                           '0x' + process.env.PRIVATE_KEY;
         
         wallet = new ethers.Wallet(privateKey, provider);
-        console.log("Wallet created successfully with address:", wallet.address);
       } catch (e) {
         console.error("Error creating wallet:", e);
         throw new Error("Failed to initialize wallet: " + e.message);
@@ -62,9 +58,7 @@ async function initialize() {
           provider: provider,
           
           // Manually define the vote function
-          vote: async function(electionId, partyId, _nullifier, _root, proofA, proofB, proofC, options = {}) {
-            console.log("Calling vote with manual implementation");
-            
+          vote: async function(electionId, partyId, _nullifier, _root, proofA, proofB, proofC, options = {}) {            
             try {
               // Create interface for encoding function data
               const iface = new ethers.Interface([
@@ -100,7 +94,6 @@ async function initialize() {
           
           // Manually define getElectionDetails
           getElectionDetails: async function(electionId) {
-            console.log("Calling getElectionDetails with manual implementation");
             
             try {
               // Create interface for encoding function data
@@ -135,13 +128,11 @@ async function initialize() {
           }
         };
         
-        console.log("Created manual contract wrapper with vote and getElectionDetails functions");
       } catch (e) {
         console.error("Error creating contract instance:", e);
         throw new Error("Failed to initialize contract: " + e.message);
       }
       
-      console.log("Voting service initialized with contract at:", ERC20_ADDRESS);
       return true;
     } catch (error) {
       console.error("Failed to initialize voting service:", error);
@@ -167,14 +158,7 @@ async function prepareVote(electionId, partyId, userData) {
     }
     
     // First, ensure the root is up-to-date on the blockchain
-    console.log("Checking if Merkle root needs updating...");
     const rootStatus = await checkAndUpdateRoot();
-    
-    if (rootStatus.updated) {
-      console.log("Merkle root was updated on-chain. New root:", rootStatus.updatedRoot);
-    } else {
-      console.log("Merkle root is already up-to-date:", rootStatus.currentRoot);
-    }
     
     // Recreate commitment from nullifier and secret
     const commitmentData = await zkpService.recreateCommitment(
@@ -187,10 +171,7 @@ async function prepareVote(electionId, partyId, userData) {
     if (!isInTree) {
       throw new Error("Voter not registered. Commitment not found in Merkle tree.");
     }
-    
-    // Generate ZK proof using the updated root
-    console.log("Generating ZK proof with up-to-date root");
-    
+        
     // First, get the Merkle path for this commitment
     const merklePath = await zkpService.getMerklePath(commitmentData.commitment);
     
@@ -207,7 +188,6 @@ async function prepareVote(electionId, partyId, userData) {
     
     // Double-check that the root in the proof is known to the contract
     const isRootKnown = await isRootKnownOnChain(zkProof.root);
-    console.log("Is proof root known to contract:", isRootKnown);
     
     if (!isRootKnown) {
       console.warn("Warning: The root used in the proof is not recognized by the contract!");
@@ -310,24 +290,16 @@ async function castVote(voteData) {
       throw new Error("Missing required voting parameters");
     }
     
-    // Log the vote attempt with truncated nullifier for privacy in logs
-    console.log(`Vote attempt: Election #${voteData.electionId}, Party #${voteData.partyId}, Nullifier: ${voteData.nullifierHash.substring(0, 10)}...`);
-    
     // Check if nullifier has already been used
     const nullifierUsed = await merkleTreeModel.nullifierExists(voteData.nullifierHash);
     if (nullifierUsed) {
       console.error(`Rejected: Nullifier ${voteData.nullifierHash.substring(0, 10)}... has already been used for voting`);
       throw new Error("This vote has already been cast");
     }
-    
-    console.log(`Preparing to cast vote with contract: ${ERC20_ADDRESS}`);
-    console.log(`Vote data: Election #${voteData.electionId}, Party #${voteData.partyId}, Nullifier: ${voteData.nullifierHash.substring(0, 10)}...`);
-    
+
     // Set up the gas options - increased for complex operations
     const gasLimit = 900000; // Increased from 750000 for more complex transactions
     const gasOptions = { gasLimit: ethers.toBigInt(gasLimit) };
-    
-    console.log("Creating transaction for vote submission...");
     
     try {
       // Create interface for encoding
@@ -346,8 +318,6 @@ async function castVote(voteData) {
       const proofB = voteData.proof_b.map(row => row.map(p => BigInt(p.toString())));
       const proofC = voteData.proof_c.map(p => BigInt(p.toString()));
       
-      console.log("Encoding vote function with parameters...");
-      
       // Encode function call
       const data = iface.encodeFunctionData("vote", [
         electionId,
@@ -358,9 +328,7 @@ async function castVote(voteData) {
         proofB,
         proofC
       ]);
-      
-      console.log(`Encoded transaction data (truncated): ${data.substring(0, 50)}...`);
-      
+            
       // Create transaction
       const tx = {
         to: ERC20_ADDRESS,
@@ -373,12 +341,9 @@ async function castVote(voteData) {
         throw new Error("Wallet not properly initialized");
       }
       
-      console.log(`Sending transaction from wallet: ${wallet.address.substring(0, 10)}...`);
       const response = await wallet.sendTransaction(tx);
-      console.log(`Transaction sent: ${response.hash}`);
       
       // Wait for confirmation with timeout
-      console.log("Waiting for transaction confirmation...");
       const receipt = await Promise.race([
         response.wait(),
         new Promise((_, reject) => 
@@ -391,9 +356,7 @@ async function castVote(voteData) {
         console.error(`Transaction failed on blockchain: ${receipt.hash}`);
         throw new Error("Transaction failed on blockchain");
       }
-      
-      console.log(`Vote confirmed in block: ${receipt.blockNumber}`);
-      
+            
       // Double-check nullifier hasn't been used in the meantime (race condition check)
       const nullifierStillUnused = !(await merkleTreeModel.nullifierExists(voteData.nullifierHash));
       if (!nullifierStillUnused) {
@@ -402,7 +365,6 @@ async function castVote(voteData) {
       }
       
       // Mark nullifier as used
-      console.log(`Marking nullifier ${voteData.nullifierHash.substring(0, 10)}... as used in database`);
       const marked = await merkleTreeModel.markNullifierUsed(voteData.nullifierHash);
       
       if (!marked) {
@@ -413,9 +375,6 @@ async function castVote(voteData) {
       let updatedResults = null;
       try {
         updatedResults = await getElectionResults(voteData.electionId);
-        console.log(`Updated vote count for party ${voteData.partyId}: ${
-          updatedResults.find(p => p.id.toString() === voteData.partyId.toString())?.voteCount || 'unknown'
-        }`);
       } catch (resultError) {
         console.warn("Could not fetch updated election results:", resultError.message);
       }
@@ -561,10 +520,7 @@ async function updateRootOnChain(root) {
   try {
     // Make sure we're initialized
     await initialize();
-    
-    console.log("Preparing to update Merkle root on chain");
-    console.log("Root to update:", root);
-    
+       
     // Create interface for the updateRoot function
     const iface = new ethers.Interface([
       "function updateRoot(bytes32 newRoot)"
@@ -596,16 +552,11 @@ async function updateRootOnChain(root) {
       const encoder = new TextEncoder();
       const data = encoder.encode(root.toString());
       rootBytes = ethers.keccak256(data);
-    }
-    
-    console.log("Encoded root bytes:", rootBytes);
+    }   
     
     // Encode function data
     const data = iface.encodeFunctionData("updateRoot", [rootBytes]);
-    
-    // Check if the wallet has permissions to update the root (admin check)
-    console.log("Checking if wallet is the owner of the contract...");
-    
+       
     try {
       const ownerIface = new ethers.Interface([
         "function owner() view returns (address)"
@@ -619,14 +570,8 @@ async function updateRootOnChain(root) {
       
       const [ownerAddress] = ownerIface.decodeFunctionResult("owner", ownerResult);
       
-      console.log("Contract owner:", ownerAddress);
-      console.log("Wallet address:", wallet.address);
-      
-      if (ownerAddress.toLowerCase() !== wallet.address.toLowerCase()) {
-        console.log("Warning: Wallet is not the contract owner, transaction might fail");
-      }
     } catch (error) {
-      console.log("Could not check contract owner:", error.message);
+      console.error("Could not check contract owner:", error.message);
     }
     
     // Create transaction with higher gas limit for complex operations
@@ -637,20 +582,15 @@ async function updateRootOnChain(root) {
     };
     
     // Send transaction
-    console.log("Sending updateRoot transaction...");
     const response = await wallet.sendTransaction(tx);
-    console.log("Transaction sent:", response.hash);
     
     // Wait for confirmation
-    console.log("Waiting for transaction confirmation...");
     const receipt = await response.wait();
     
     // Check transaction status
     if (receipt.status === 1) {
-      console.log("Root updated successfully in block:", receipt.blockNumber);
       return true;
     } else {
-      console.log("Root update transaction reverted. Receipt:", JSON.stringify(receipt, null, 2));
       return false;
     }
   } catch (error) {
@@ -669,7 +609,6 @@ async function checkAndUpdateRoot() {
     await initialize();
     
     // Step 1: Get the current on-chain root
-    console.log("Getting current root from blockchain...");
     let currentOnChainRoot;
     
     try {
@@ -684,28 +623,23 @@ async function checkAndUpdateRoot() {
       });
       
       [currentOnChainRoot] = iface.decodeFunctionResult("getLastRoot", result);
-      console.log("Current on-chain root:", currentOnChainRoot);
     } catch (error) {
-      console.log("Could not get current root from blockchain:", error.message);
+      console.error("Could not get current root from blockchain:", error.message);
       currentOnChainRoot = null;
     }
     
-    // Step 2: Get the latest root from our off-chain database
-    console.log("Getting latest root from database...");
     let offChainRoot;
     
     try {
       offChainRoot = await merkleTreeModel.getLatestRoot();
-      console.log("Latest off-chain root:", offChainRoot);
     } catch (error) {
-      console.log("Could not get latest root from database:", error.message);
+      console.error("Could not get latest root from database:", error.message);
       offChainRoot = null;
     }
     
     // Step 3: If roots don't match, update on-chain
     if (offChainRoot && (!currentOnChainRoot || 
         (currentOnChainRoot.toLowerCase() !== offChainRoot.toLowerCase()))) {
-      console.log("Roots don't match, updating on-chain...");
       const updated = await updateRootOnChain(offChainRoot);
       
       return {
@@ -714,7 +648,6 @@ async function checkAndUpdateRoot() {
         updated: updated
       };
     } else {
-      console.log("Roots match, no update needed");
       return {
         currentRoot: currentOnChainRoot,
         updatedRoot: currentOnChainRoot,

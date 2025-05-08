@@ -17,8 +17,6 @@ const SALT_ROUNDS = 10;
 // Route for user registration
 router.post('/register', async (req, res) => {
   const { commitment_hash, password, is_admin } = req.body;
-  console.log(req.body);
-  console.log("Registering user :", commitment_hash, password, is_admin);
   try {
     // Hash both id_number and password
     const hashedCommitent = await bcrypt.hash(commitment_hash, SALT_ROUNDS);
@@ -56,7 +54,6 @@ router.post('/register', async (req, res) => {
 
 router.post('/login', async (req, res) => {
   const { idNumber, password } = req.body;
-  console.log("Login data:", req.body);
   try {
     // Need to retrieve all users since id_number is hashed
     const allUsersQuery = 'SELECT * FROM users';
@@ -68,7 +65,6 @@ router.post('/login', async (req, res) => {
       const idMatches = await bcrypt.compare(idNumber, currentUser.commitment);
       if (idMatches) {
         user = currentUser;
-        console.log("User found:", user);
         break;
       }
     }
