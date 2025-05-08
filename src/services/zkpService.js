@@ -236,6 +236,7 @@ async function generateVotingProof(nullifier, secret, commitment) {
   }
 }
 
+
 // Export functions
 module.exports = {
   initialize,
@@ -246,5 +247,5 @@ module.exports = {
   getMerklePath,
   getMerkleRoot,
   generateVotingProof,
-  isCommitmentInTree
+  isCommitmentInTree,
 };
