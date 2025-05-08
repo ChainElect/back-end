@@ -26,7 +26,7 @@ async function initialize() {
 async function generateCommitment() {
   await initialize();
   
-  // Generate random nullifier and secret
+  // Generate truly random nullifier and secret with more entropy
   const nullifier = BigInt('0x' + crypto.randomBytes(31).toString('hex'));
   const secret = BigInt('0x' + crypto.randomBytes(31).toString('hex'));
   
@@ -35,6 +35,13 @@ async function generateCommitment() {
   
   // Calculate nullifier hash (used for verification)
   const nullifierHash = mimc.F.toString(mimc.multiHash([nullifier.toString()]));
+  
+  // Immediately check if this nullifier hash already exists
+  const nullifierExists = await merkleTreeModel.nullifierExists(nullifierHash);
+  if (nullifierExists) {
+    console.log("Generated nullifier already exists, generating a new one...");
+    return generateCommitment(); // Recursively try again
+  }
   
   return {
     nullifier: nullifier.toString(),
@@ -78,7 +85,7 @@ function generateZeros() {
 }
 
 // Add a new commitment to the Merkle tree
-async function addCommitment(commitment) {
+async function addCommitment(commitment, nullifierHash = null) {
   await initialize();
   
   // Get all existing commitments from the database
@@ -90,8 +97,8 @@ async function addCommitment(commitment) {
   // Calculate new Merkle root and path
   const result = calculateMerkleRootAndPath(commitments, commitment);
   
-  // Save commitment to database
-  await merkleTreeModel.saveCommitment(commitment);
+  // Save commitment to database with the nullifierHash
+  await merkleTreeModel.saveCommitment(commitment, nullifierHash);
   
   // Save new root to database
   await merkleTreeModel.saveRoot(result.root);

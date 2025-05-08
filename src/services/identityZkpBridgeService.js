@@ -9,9 +9,9 @@ async function registerVerifiedUser(userData) {
     console.log("registerVerifiedUser", userData);
     // Step 1: Generate ZKP commitment
     const commitment = await zkpService.generateCommitment();
-    const mimcSponge = await buildMimcSponge();
-    // Step 2: Add commitment to Merkle tree
-    await zkpService.addCommitment(commitment.commitment);
+    
+    // Step 2: Add commitment to Merkle tree with nullifierHash
+    await zkpService.addCommitment(commitment.commitment, commitment.nullifierHash);
 
     // Step 3: Store user data in database
     await userModel.saveUser({

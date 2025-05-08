@@ -293,6 +293,11 @@ async function isRootKnownOnChain(root) {
  * @param {Object} voteData - Vote data including ZKP
  * @returns {Promise<Object>} - Transaction receipt
  */
+/**
+ * Cast vote using blockchain transaction
+ * @param {Object} voteData - Vote data including ZKP
+ * @returns {Promise<Object>} - Transaction receipt
+ */
 async function castVote(voteData) {
   try {
     // Make sure to initialize first
@@ -305,25 +310,24 @@ async function castVote(voteData) {
       throw new Error("Missing required voting parameters");
     }
     
+    // Log the vote attempt with truncated nullifier for privacy in logs
+    console.log(`Vote attempt: Election #${voteData.electionId}, Party #${voteData.partyId}, Nullifier: ${voteData.nullifierHash.substring(0, 10)}...`);
+    
     // Check if nullifier has already been used
     const nullifierUsed = await merkleTreeModel.nullifierExists(voteData.nullifierHash);
     if (nullifierUsed) {
+      console.error(`Rejected: Nullifier ${voteData.nullifierHash.substring(0, 10)}... has already been used for voting`);
       throw new Error("This vote has already been cast");
     }
     
-    console.log("Preparing to cast vote with contract:", ERC20_ADDRESS);
-    console.log("Vote data:", {
-      electionId: voteData.electionId,
-      partyId: voteData.partyId,
-      nullifierHash: voteData.nullifierHash.substring(0, 15) + "..." // Truncate for logging
-    });
+    console.log(`Preparing to cast vote with contract: ${ERC20_ADDRESS}`);
+    console.log(`Vote data: Election #${voteData.electionId}, Party #${voteData.partyId}, Nullifier: ${voteData.nullifierHash.substring(0, 10)}...`);
     
-    // Set up the gas options
-    const gasLimit = 750000;
+    // Set up the gas options - increased for complex operations
+    const gasLimit = 900000; // Increased from 750000 for more complex transactions
     const gasOptions = { gasLimit: ethers.toBigInt(gasLimit) };
     
-    // Create a manual transaction
-    console.log("Creating manual transaction...");
+    console.log("Creating transaction for vote submission...");
     
     try {
       // Create interface for encoding
@@ -331,13 +335,13 @@ async function castVote(voteData) {
         "function vote(uint256 electionId, uint256 partyId, uint256 _nullifier, uint256 _root, uint256[2] proofA, uint256[2][2] proofB, uint256[2] proofC)"
       ]);
       
-      // Ensure all parameters are correctly formatted
+      // Ensure all parameters are correctly formatted as BigInt
       const electionId = BigInt(voteData.electionId);
       const partyId = BigInt(voteData.partyId);
       const nullifier = BigInt(voteData.nullifierHash);
       const root = BigInt(voteData.root);
       
-      // Make sure proof arrays have the right format
+      // Format proof arrays correctly
       const proofA = voteData.proof_a.map(p => BigInt(p.toString()));
       const proofB = voteData.proof_b.map(row => row.map(p => BigInt(p.toString())));
       const proofC = voteData.proof_c.map(p => BigInt(p.toString()));
@@ -355,48 +359,102 @@ async function castVote(voteData) {
         proofC
       ]);
       
-      console.log("Encoded transaction data (first 50 chars):", data.substring(0, 50) + "...");
+      console.log(`Encoded transaction data (truncated): ${data.substring(0, 50)}...`);
       
-      // Create and send transaction
+      // Create transaction
       const tx = {
         to: ERC20_ADDRESS,
         data: data,
         ...gasOptions
       };
       
-      console.log("Sending transaction...");
-      const response = await wallet.sendTransaction(tx);
-      console.log("Transaction sent:", response.hash);
+      // Check if wallet is initialized
+      if (!wallet || !wallet.address) {
+        throw new Error("Wallet not properly initialized");
+      }
       
-      // Wait for confirmation
+      console.log(`Sending transaction from wallet: ${wallet.address.substring(0, 10)}...`);
+      const response = await wallet.sendTransaction(tx);
+      console.log(`Transaction sent: ${response.hash}`);
+      
+      // Wait for confirmation with timeout
       console.log("Waiting for transaction confirmation...");
-      const receipt = await response.wait();
+      const receipt = await Promise.race([
+        response.wait(),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error("Transaction confirmation timeout")), 120000) // 2 minute timeout
+        )
+      ]);
       
       // Check transaction status
       if (receipt.status === 0) {
+        console.error(`Transaction failed on blockchain: ${receipt.hash}`);
         throw new Error("Transaction failed on blockchain");
       }
       
-      console.log("Vote confirmed in block:", receipt.blockNumber);
+      console.log(`Vote confirmed in block: ${receipt.blockNumber}`);
+      
+      // Double-check nullifier hasn't been used in the meantime (race condition check)
+      const nullifierStillUnused = !(await merkleTreeModel.nullifierExists(voteData.nullifierHash));
+      if (!nullifierStillUnused) {
+        console.error(`Nullifier ${voteData.nullifierHash.substring(0, 10)}... was marked as used during transaction confirmation!`);
+        throw new Error("Vote was already recorded during transaction processing");
+      }
       
       // Mark nullifier as used
-      await merkleTreeModel.markNullifierUsed(voteData.nullifierHash);
+      console.log(`Marking nullifier ${voteData.nullifierHash.substring(0, 10)}... as used in database`);
+      const marked = await merkleTreeModel.markNullifierUsed(voteData.nullifierHash);
+      
+      if (!marked) {
+        console.warn(`Failed to mark nullifier ${voteData.nullifierHash.substring(0, 10)}... as used in database, but blockchain transaction succeeded`);
+      }
+      
+      // Get updated election results if needed
+      let updatedResults = null;
+      try {
+        updatedResults = await getElectionResults(voteData.electionId);
+        console.log(`Updated vote count for party ${voteData.partyId}: ${
+          updatedResults.find(p => p.id.toString() === voteData.partyId.toString())?.voteCount || 'unknown'
+        }`);
+      } catch (resultError) {
+        console.warn("Could not fetch updated election results:", resultError.message);
+      }
       
       return {
         success: true,
         transactionHash: receipt.hash,
-        blockNumber: receipt.blockNumber
+        blockNumber: receipt.blockNumber,
+        updatedResults: updatedResults
       };
-    } catch (error) {
-      console.error("Error in transaction:", error);
-      throw new Error(`Transaction failed: ${error.message}`);
+    } catch (txError) {
+      // Handle specific blockchain errors
+      if (txError.message && txError.message.includes("already revealed")) {
+        throw new Error("This vote has already been cast");
+      } else if (txError.message && txError.message.includes("invalid proof")) {
+        throw new Error("Vote rejected: invalid cryptographic proof");
+      } else if (txError.message && txError.message.includes("election has ended")) {
+        throw new Error("Voting period for this election has ended");
+      } else if (txError.message && txError.message.includes("election not started")) {
+        throw new Error("Voting period for this election has not started yet");
+      }
+      
+      console.error("Transaction error:", txError);
+      throw new Error(`Transaction failed: ${txError.message}`);
     }
   } catch (error) {
     console.error("Error casting vote:", error);
     
-    // Handle specific error cases
-    if (error.message && error.message.includes("already voted")) {
+    // Handle specific error cases with user-friendly messages
+    if (error.message && error.message.includes("already voted") || 
+        error.message && error.message.includes("already been cast") ||
+        error.message && error.message.includes("already revealed")) {
       throw new Error("You have already voted in this election");
+    } else if (error.message && error.message.includes("Wallet not properly initialized")) {
+      throw new Error("System error: Voting service not properly initialized");
+    } else if (error.message && error.message.includes("Transaction confirmation timeout")) {
+      throw new Error("Vote submission is taking longer than expected. Please check the election status in a few minutes to confirm your vote");
+    } else if (error.code === "INSUFFICIENT_FUNDS") {
+      throw new Error("System error: Insufficient blockchain funds for processing votes");
     }
     
     throw new Error(error.message || "Vote submission failed");
